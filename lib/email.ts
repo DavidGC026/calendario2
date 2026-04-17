@@ -50,6 +50,7 @@ function getResend(): Resend | null {
   return new Resend(key)
 }
 
+/** Remitente Resend: "Nombre visible <correo@dominio>". En producción usa tu dominio verificado (p. ej. calendar@dvguzman.com). */
 function fromAddress(): string {
   return process.env.RESEND_FROM_EMAIL?.trim() || "Calendario <onboarding@resend.dev>"
 }
