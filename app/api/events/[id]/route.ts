@@ -15,6 +15,7 @@ const updateEventSchema = z
     color: z.string().optional().nullable(),
     attendees: z.array(z.string()).optional().nullable(),
     participantUserIds: z.array(z.string()).optional().nullable(),
+    participantNameHints: z.array(z.string()).optional().nullable(),
     organizer: z.string().optional().nullable(),
     allowConflict: z.boolean().optional(),
   })

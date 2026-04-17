@@ -62,6 +62,82 @@ export async function listFriends(userId: string): Promise<FriendSummary[]> {
   return users
 }
 
+function normalizeComparable(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+/** Heurística: IDs de usuario en BD (cuid, etc.) frente a nombres que la IA mete por error en participantUserIds. */
+function looksLikeDatabaseUserId(s: string): boolean {
+  const t = s.trim()
+  return t.length >= 20 && t.length <= 36 && /^[a-z0-9_-]+$/i.test(t) && !/\s/.test(t)
+}
+
+function friendMatchesHint(f: FriendSummary, hint: string): boolean {
+  const h = normalizeComparable(hint)
+  if (h.length < 2) return false
+  if (f.id === hint.trim()) return true
+  const name = normalizeComparable(f.name ?? "")
+  const email = f.email.toLowerCase()
+  const local = email.split("@")[0] ?? ""
+
+  if (name === h) return true
+  if (name.includes(h) || (h.length >= 3 && h.includes(name) && name.length >= 2)) return true
+
+  const hWords = h.split(" ").filter((w) => w.length > 0)
+  if (hWords.length >= 2 && hWords.every((w) => name.includes(w))) return true
+
+  const compact = h.replace(/\s/g, "")
+  if (compact.length >= 3 && (local.includes(compact) || email.includes(h.replace(/\s/g, ".")))) return true
+  return false
+}
+
+/**
+ * Convierte IDs válidos + pistas de nombre (y "IDs" que en realidad son nombres) en userIds de amigos aceptados.
+ */
+export async function resolveParticipantUserIdsForOwner(
+  ownerId: string,
+  participantUserIds: string[] | null | undefined,
+  participantNameHints: string[] | null | undefined,
+): Promise<string[]> {
+  const friends = await listFriends(ownerId)
+  const friendById = new Map(friends.map((f) => [f.id, f]))
+  const out = new Set<string>()
+  const nameBuckets: string[] = [...(participantNameHints ?? [])].filter(Boolean).map((s) => s.trim())
+
+  for (const raw of participantUserIds ?? []) {
+    const t = raw.trim()
+    if (!t) continue
+    if (friendById.has(t)) {
+      out.add(t)
+      continue
+    }
+    if (!looksLikeDatabaseUserId(t)) {
+      nameBuckets.push(t)
+    }
+  }
+
+  const seenHints = new Set<string>()
+  for (const hint of nameBuckets) {
+    const key = normalizeComparable(hint)
+    if (!key || seenHints.has(key)) continue
+    seenHints.add(key)
+    const matches = friends.filter((f) => friendMatchesHint(f, hint))
+    if (matches.length === 1) {
+      out.add(matches[0].id)
+    } else if (matches.length > 1) {
+      const exact = matches.find((f) => normalizeComparable(f.name ?? "") === normalizeComparable(hint))
+      if (exact) out.add(exact.id)
+    }
+  }
+
+  return [...out].filter((id) => id !== ownerId)
+}
+
 export async function listIncomingRequests(userId: string): Promise<FriendRequestSummary[]> {
   const rows = await prisma.friendRequest.findMany({
     where: { toUserId: userId, status: "PENDING" },

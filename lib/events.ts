@@ -1,7 +1,7 @@
 import { type Event } from "@prisma/client"
 
 import { formatISODateLocal } from "@/lib/calendar-view-utils"
-import { validateParticipantIdsAreFriends } from "@/lib/friends"
+import { resolveParticipantUserIdsForOwner } from "@/lib/friends"
 import { prisma } from "@/lib/prisma"
 
 export type EventParticipant = {
@@ -36,6 +36,8 @@ type CreateEventInput = {
   color?: string | null
   attendees?: string[] | null
   participantUserIds?: string[] | null
+  /** Nombres o fragmentos; se resuelven contra la lista de amigos del dueño. */
+  participantNameHints?: string[] | null
   organizer?: string | null
 }
 
@@ -142,13 +144,11 @@ export async function getEventsForDate(userId: string, date: string) {
 }
 
 export async function createEventForUser(userId: string, input: CreateEventInput, allowConflict = false) {
-  const participantUserIds = [...new Set(input.participantUserIds ?? [])].filter(Boolean)
-  if (participantUserIds.length > 0) {
-    const ok = await validateParticipantIdsAreFriends(userId, participantUserIds)
-    if (!ok) {
-      throw new Error("Solo puedes añadir como participantes a usuarios con los que tengas amistad aceptada")
-    }
-  }
+  const participantUserIds = await resolveParticipantUserIdsForOwner(
+    userId,
+    input.participantUserIds,
+    input.participantNameHints,
+  )
 
   const { startTime: st, endTime: et } = ensureEndAfterStart(input.eventDate, input.startTime, input.endTime)
   const startAt = toDateTime(input.eventDate, st)
@@ -199,16 +199,6 @@ export async function updateEventForUser(
     return { event: null, conflicts: [], notFound: true as const }
   }
 
-  if (input.participantUserIds !== undefined && input.participantUserIds !== null) {
-    const ids = [...new Set(input.participantUserIds)].filter(Boolean)
-    if (ids.length > 0) {
-      const ok = await validateParticipantIdsAreFriends(userId, ids)
-      if (!ok) {
-        throw new Error("Solo puedes añadir como participantes a usuarios con los que tengas amistad aceptada")
-      }
-    }
-  }
-
   const nextDate = input.eventDate ?? formatISODateLocal(existing.startAt)
   const nextStartTime = input.startTime ?? formatTime(existing.startAt)
   const nextEndTime = input.endTime ?? formatTime(existing.endAt)
@@ -226,10 +216,21 @@ export async function updateEventForUser(
     return { event: null, conflicts: await Promise.all(conflicts.map(toEventDTO)), notFound: false as const }
   }
 
-  const nextParticipants =
-    input.participantUserIds !== undefined && input.participantUserIds !== null
-      ? [...new Set(input.participantUserIds)].filter(Boolean)
-      : existing.participantUserIds
+  const hasNewIds = input.participantUserIds !== undefined && input.participantUserIds !== null
+  const hasHints =
+    input.participantNameHints !== undefined &&
+    input.participantNameHints !== null &&
+    input.participantNameHints.filter(Boolean).length > 0
+
+  let nextParticipants = existing.participantUserIds
+  if (hasNewIds || hasHints) {
+    const baseIds = hasNewIds ? input.participantUserIds! : existing.participantUserIds
+    nextParticipants = await resolveParticipantUserIdsForOwner(
+      userId,
+      baseIds,
+      hasHints ? input.participantNameHints : null,
+    )
+  }
 
   const prevDate = formatISODateLocal(existing.startAt)
   const prevStartTime = formatTime(existing.startAt)

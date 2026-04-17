@@ -129,6 +129,7 @@ ${isEnglish ? "When creating events, always pass endTime after startTime (HH:MM)
 ${calendarLanePromptBlock(isEnglish)}
 ${isEnglish ? "Use event id from the list above for updateEvent/deleteEvent." : "Para updateEvent o deleteEvent usa el id=... de cada línea de evento."}
 ${isEnglish ? "When changing participants, participantUserIds must include every friend who should stay on the event (merge existing ids from the event line with new ones)." : "Si cambias participantes, participantUserIds debe incluir todos los amigos que deben quedar en el evento (mezcla los participantUserIds que ya aparecen en la línea del evento con los nuevos)."}
+${isEnglish ? "You may use participantNameHints with a friend's name (e.g. \"Jose David\") instead of IDs; the server resolves names to user ids." : "Puedes usar participantNameHints con el nombre del amigo (p. ej. «José David») además o en lugar de participantUserIds; el servidor resuelve el nombre contra la lista de amigos."}
 ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre en español y de forma concisa."}${multimodalHint}${dateContext}${eventsContext}${friendsContext}`,
     messages: await convertToModelMessages(messages),
     tools: {
@@ -161,7 +162,13 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
             .array(z.string())
             .optional()
             .describe(
-              "IDs userId de la lista de amigos del contexto; obligatorio para invitar. No uses solo nombres en attendees.",
+              "IDs de la lista de amigos (userId=...). Si no los tienes claros, usa participantNameHints.",
+            ),
+          participantNameHints: z
+            .array(z.string())
+            .optional()
+            .describe(
+              "Nombres de amigos a invitar (p. ej. «José David»); se resuelven contra tu lista de amigos. Puedes usar esto en lugar de participantUserIds.",
             ),
           organizer: z.string().optional(),
           allowConflict: z.boolean().optional(),
@@ -205,7 +212,11 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
           participantUserIds: z
             .array(z.string())
             .optional()
-            .describe("IDs de la lista de amigos; incluye todos los que deben seguir en el evento al editar"),
+            .describe("IDs de amigos que deben quedar en el evento al reemplazar la lista"),
+          participantNameHints: z
+            .array(z.string())
+            .optional()
+            .describe("Añade o resuelve amigos por nombre; se fusionan con la lista actual si no pasas participantUserIds"),
           organizer: z.string().optional(),
           allowConflict: z.boolean().optional(),
         }),
