@@ -25,9 +25,9 @@ import {
   updateEventForUser,
 } from "@/lib/events"
 import {
-  notifyEventCreatedAsync,
-  notifyEventDeletedAsync,
-  notifyEventUpdatedAsync,
+  runNotifyEventCreated,
+  runNotifyEventDeleted,
+  runNotifyEventUpdated,
 } from "@/lib/event-notifications"
 import { listFriends, searchFriendsByHint } from "@/lib/friends"
 
@@ -212,7 +212,7 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
               }
             }
 
-            notifyEventCreatedAsync(userId, created.event)
+            await runNotifyEventCreated(userId, created.event)
 
             return {
               success: true,
@@ -262,7 +262,7 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
               }
             }
 
-            notifyEventUpdatedAsync(userId, updated.event)
+            await runNotifyEventUpdated(userId, updated.event)
 
             return { success: true, event: updated.event, conflicts: updated.conflicts }
           } catch (e) {
@@ -281,7 +281,7 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
             if (!deletedDto) {
               return { success: false, message: copy.eventNotFound }
             }
-            notifyEventDeletedAsync(userId, deletedDto)
+            await runNotifyEventDeleted(userId, deletedDto)
             return { success: true }
           } catch (e) {
             return toolErr(e)
