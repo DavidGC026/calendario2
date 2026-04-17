@@ -255,16 +255,17 @@ export async function updateEventForUser(
   return { event: await toEventDTO(event), conflicts: await Promise.all(conflicts.map(toEventDTO)), notFound: false as const }
 }
 
-export async function deleteEventForUser(userId: string, eventId: string) {
+/** Devuelve el DTO antes de borrar (para correos); null si no existe o no es del usuario. */
+export async function deleteEventForUser(userId: string, eventId: string): Promise<EventDTO | null> {
   const existing = await prisma.event.findFirst({
     where: { id: eventId, userId },
-    select: { id: true },
   })
 
-  if (!existing) return false
+  if (!existing) return null
 
+  const dto = await toEventDTO(existing)
   await prisma.event.delete({ where: { id: eventId } })
-  return true
+  return dto
 }
 
 export async function findConflictsForUser(

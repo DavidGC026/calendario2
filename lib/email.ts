@@ -109,6 +109,22 @@ export async function sendEventUpdatedEmail(params: { to: string; event: EventDT
   await sendHtmlEmail(to, subj, layout("Evento actualizado", inner))
 }
 
+export async function sendEventDeletedEmail(params: {
+  to: string
+  event: EventDTO
+  role: "owner" | "participant"
+  organizerName?: string | null
+}): Promise<void> {
+  const { to, event, role, organizerName } = params
+  const subj = role === "owner" ? `Evento eliminado: ${event.title}` : `Evento cancelado: ${event.title}`
+  const intro =
+    role === "owner"
+      ? "<p>Has eliminado este evento de tu calendario.</p>"
+      : `<p><strong>${organizerName ? escHtml(organizerName) : "El organizador"}</strong> ha eliminado un evento en el que participabas.</p>`
+  const inner = `${intro}${eventBlock(event)}`
+  await sendHtmlEmail(to, subj, layout(role === "owner" ? "Evento eliminado" : "Evento cancelado", inner))
+}
+
 export async function sendEventDayReminderEmail(params: {
   to: string
   event: EventDTO

@@ -24,6 +24,11 @@ import {
   listEventsForUser,
   updateEventForUser,
 } from "@/lib/events"
+import {
+  notifyEventCreatedAsync,
+  notifyEventDeletedAsync,
+  notifyEventUpdatedAsync,
+} from "@/lib/event-notifications"
 import { listFriends } from "@/lib/friends"
 
 function toolErr(err: unknown) {
@@ -173,6 +178,8 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
               }
             }
 
+            notifyEventCreatedAsync(userId, created.event)
+
             return {
               success: true,
               event: created.event,
@@ -217,6 +224,8 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
               }
             }
 
+            notifyEventUpdatedAsync(userId, updated.event)
+
             return { success: true, event: updated.event, conflicts: updated.conflicts }
           } catch (e) {
             return toolErr(e)
@@ -230,8 +239,12 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
         }),
         execute: async ({ eventId }) => {
           try {
-            const ok = await deleteEventForUser(userId, eventId)
-            return ok ? { success: true } : { success: false, message: copy.eventNotFound }
+            const deletedDto = await deleteEventForUser(userId, eventId)
+            if (!deletedDto) {
+              return { success: false, message: copy.eventNotFound }
+            }
+            notifyEventDeletedAsync(userId, deletedDto)
+            return { success: true }
           } catch (e) {
             return toolErr(e)
           }
