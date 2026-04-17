@@ -29,7 +29,7 @@ import {
   notifyEventDeletedAsync,
   notifyEventUpdatedAsync,
 } from "@/lib/event-notifications"
-import { listFriends } from "@/lib/friends"
+import { listFriends, searchFriendsByHint } from "@/lib/friends"
 
 function toolErr(err: unknown) {
   return { success: false as const, error: err instanceof Error ? err.message : String(err) }
@@ -130,6 +130,7 @@ ${calendarLanePromptBlock(isEnglish)}
 ${isEnglish ? "Use event id from the list above for updateEvent/deleteEvent." : "Para updateEvent o deleteEvent usa el id=... de cada línea de evento."}
 ${isEnglish ? "When changing participants, participantUserIds must include every friend who should stay on the event (merge existing ids from the event line with new ones)." : "Si cambias participantes, participantUserIds debe incluir todos los amigos que deben quedar en el evento (mezcla los participantUserIds que ya aparecen en la línea del evento con los nuevos)."}
 ${isEnglish ? "You may use participantNameHints with a friend's name (e.g. \"Jose David\") instead of IDs; the server resolves names to user ids." : "Puedes usar participantNameHints con el nombre del amigo (p. ej. «José David») además o en lugar de participantUserIds; el servidor resuelve el nombre contra la lista de amigos."}
+${isEnglish ? "Before inviting someone by name only, call searchFriends with that name: 0 matches → say no friend matched and ask them to paste the exact userId from the friends list above, or fix friendship; 2+ matches → list options and ask which one or for userId; 1 match → use that userId." : "Antes de invitar solo por nombre, llama a searchFriends con ese texto: 0 coincidencias → di que no hay amigo con ese nombre y pide el userId exacto de la lista de arriba o que compruebe la amistad; 2+ → enumera opciones (userId, nombre, email) y pide que aclare o el userId; 1 → usa ese userId en el evento."}
 ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre en español y de forma concisa."}${multimodalHint}${dateContext}${eventsContext}${friendsContext}`,
     messages: await convertToModelMessages(messages),
     tools: {
@@ -142,6 +143,32 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
           try {
             const eventsOnDate = await getEventsForDate(userId, date)
             return eventsOnDate.length > 0 ? eventsOnDate : { message: copy.noEventsForDate }
+          } catch (e) {
+            return toolErr(e)
+          }
+        },
+      }),
+      searchFriends: tool({
+        description: isEnglish
+          ? "Search accepted friends by name or email fragment. Use BEFORE inviting by name: 0 matches ask for userId; several matches ask which one."
+          : "Buscar amigos aceptados por nombre o parte del email. Usar ANTES de invitar por nombre: 0 resultados pedir userId; varios pedir cuál.",
+        inputSchema: z.object({
+          nameOrEmailHint: z
+            .string()
+            .min(2)
+            .describe(isEnglish ? "Name or email fragment to search" : "Nombre o fragmento de correo a buscar"),
+        }),
+        execute: async ({ nameOrEmailHint }) => {
+          try {
+            const matches = await searchFriendsByHint(userId, nameOrEmailHint)
+            return {
+              matchCount: matches.length,
+              matches: matches.map((m) => ({
+                userId: m.id,
+                name: m.name,
+                email: m.email,
+              })),
+            }
           } catch (e) {
             return toolErr(e)
           }

@@ -138,6 +138,14 @@ export async function resolveParticipantUserIdsForOwner(
   return [...out].filter((id) => id !== ownerId)
 }
 
+/** Busca amigos por nombre o fragmento de email (para la IA antes de invitar). */
+export async function searchFriendsByHint(userId: string, hint: string): Promise<FriendSummary[]> {
+  const t = hint.trim()
+  if (t.length < 2) return []
+  const friends = await listFriends(userId)
+  return friends.filter((f) => friendMatchesHint(f, t))
+}
+
 export async function listIncomingRequests(userId: string): Promise<FriendRequestSummary[]> {
   const rows = await prisma.friendRequest.findMany({
     where: { toUserId: userId, status: "PENDING" },
