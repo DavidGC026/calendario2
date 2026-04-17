@@ -24,6 +24,7 @@ import {
   listEventsForUser,
   updateEventForUser,
 } from "@/lib/events"
+import { listFriends } from "@/lib/friends"
 
 function toolErr(err: unknown) {
   return { success: false as const, error: err instanceof Error ? err.message : String(err) }
@@ -89,6 +90,15 @@ export async function POST(req: Request) {
       ? `\n\n${copy.currentEvents}:\n${userEvents.map((e) => formatEventLineForContext(e, isEnglish)).join("\n")}`
       : `\n\n${copy.noEvents}`
 
+  const friends = await listFriends(userId)
+  const friendsContext = isEnglish
+    ? friends.length > 0
+      ? `\n\nFriends in the app (to invite someone you MUST pass their user id in participantUserIds in createEvent/updateEvent — copying only a name into "attendees" does NOT invite them or email them):\n${friends.map((f) => `- userId=${f.id} — ${f.name ?? "(no name)"} <${f.email}>`).join("\n")}`
+      : `\n\nThe user has no friends in the app yet; you cannot set participantUserIds.`
+    : friends.length > 0
+      ? `\n\nAmigos en la app (para invitar a alguien DEBES poner su userId en participantUserIds en createEvent o updateEvent; poner solo el nombre en "attendees" o en el título NO lo añade como participante ni envía correos):\n${friends.map((f) => `- userId=${f.id} — ${f.name ?? "(sin nombre)"} <${f.email}>`).join("\n")}`
+      : `\n\nEl usuario aún no tiene amigos en la app; no puedes usar participantUserIds.`
+
   const dateContext = isEnglish
     ? `\n\nToday's date is ${todayIso} (${todayReadable}). For tool calls, always use eventDate as YYYY-MM-DD. If the user gives a day and month without a year, choose the year that matches their intent relative to today (often the current year if that calendar date has not passed yet, or the upcoming occurrence they mean).`
     : `\n\nLa fecha de hoy es ${todayIso} (${todayReadable}). Para las tools usa siempre eventDate en formato YYYY-MM-DD. Si el usuario indica solo día y mes sin año, elige el año coherente con lo que pide respecto a hoy (por ejemplo el año actual si aún no pasó esa fecha este año, o el "próximo" 27 de abril que corresponda).`
@@ -112,7 +122,9 @@ ${isEnglish ? "Whenever it makes sense, use tools to read or modify real events.
 ${isEnglish ? "Never invent IDs or tool results." : "No inventes IDs ni resultados de tools."}
 ${isEnglish ? "When creating events, always pass endTime after startTime (HH:MM). If the user only gives a start time, set endTime to one hour later." : "Al crear eventos, pasa siempre endTime posterior a startTime (HH:MM). Si el usuario solo da hora de inicio (p. ej. «desde la 1 pm»), pon endTime una hora después de startTime."}
 ${calendarLanePromptBlock(isEnglish)}
-${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre en español y de forma concisa."}${multimodalHint}${dateContext}${eventsContext}`,
+${isEnglish ? "Use event id from the list above for updateEvent/deleteEvent." : "Para updateEvent o deleteEvent usa el id=... de cada línea de evento."}
+${isEnglish ? "When changing participants, participantUserIds must include every friend who should stay on the event (merge existing ids from the event line with new ones)." : "Si cambias participantes, participantUserIds debe incluir todos los amigos que deben quedar en el evento (mezcla los participantUserIds que ya aparecen en la línea del evento con los nuevos)."}
+${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre en español y de forma concisa."}${multimodalHint}${dateContext}${eventsContext}${friendsContext}`,
     messages: await convertToModelMessages(messages),
     tools: {
       getEventsForDate: tool({
@@ -139,11 +151,13 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
           description: z.string().optional(),
           location: z.string().optional(),
           color: calendarColorSchema,
-          attendees: z.array(z.string()).optional(),
+          attendees: z.array(z.string()).optional().describe("Etiquetas de texto; no invita amigos"),
           participantUserIds: z
             .array(z.string())
             .optional()
-            .describe("IDs de usuario amigos (solo amistad aceptada)"),
+            .describe(
+              "IDs userId de la lista de amigos del contexto; obligatorio para invitar. No uses solo nombres en attendees.",
+            ),
           organizer: z.string().optional(),
           allowConflict: z.boolean().optional(),
         }),
@@ -180,8 +194,11 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
           description: z.string().nullable().optional(),
           location: z.string().nullable().optional(),
           color: calendarColorSchema,
-          attendees: z.array(z.string()).optional(),
-          participantUserIds: z.array(z.string()).optional(),
+          attendees: z.array(z.string()).optional().describe("Etiquetas; no invita amigos"),
+          participantUserIds: z
+            .array(z.string())
+            .optional()
+            .describe("IDs de la lista de amigos; incluye todos los que deben seguir en el evento al editar"),
           organizer: z.string().optional(),
           allowConflict: z.boolean().optional(),
         }),
