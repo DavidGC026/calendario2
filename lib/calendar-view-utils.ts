@@ -11,6 +11,14 @@ export function parseTimeToMinutes(t: string): number {
   return Number(h) * 60 + Number(m)
 }
 
+/** Fecha calendario local YYYY-MM-DD (no usar toISOString: es UTC y desalinea columnas vs eventDate del API). */
+export function formatISODateLocal(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}
+
 export function getWeekDates(anchorISO: string): string[] {
   const d = new Date(`${anchorISO}T12:00:00`)
   const day = d.getDay()
@@ -19,14 +27,14 @@ export function getWeekDates(anchorISO: string): string[] {
   return Array.from({ length: 7 }, (_, i) => {
     const x = new Date(start)
     x.setDate(start.getDate() + i)
-    return x.toISOString().slice(0, 10)
+    return formatISODateLocal(x)
   })
 }
 
 export function addDays(iso: string, delta: number): string {
   const d = new Date(`${iso}T12:00:00`)
   d.setDate(d.getDate() + delta)
-  return d.toISOString().slice(0, 10)
+  return formatISODateLocal(d)
 }
 
 export function formatWeekRangeLabel(

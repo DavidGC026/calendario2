@@ -1,5 +1,6 @@
 import { type Event } from "@prisma/client"
 
+import { formatISODateLocal } from "@/lib/calendar-view-utils"
 import { prisma } from "@/lib/prisma"
 
 export type EventDTO = {
@@ -40,8 +41,28 @@ function formatTime(date: Date): string {
   return `${hours}:${minutes}`
 }
 
-function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10)
+
+/** Si fin <= inicio (p. ej. "desde la 1pm" sin duración), ajusta fin a +1 h el mismo día o 23:59 si cruza medianoche. */
+export function ensureEndAfterStart(
+  eventDate: string,
+  startTime: string,
+  endTime: string,
+): { startTime: string; endTime: string } {
+  const startAt = toDateTime(eventDate, startTime)
+  const endAt = toDateTime(eventDate, endTime)
+  if (endAt > startAt) {
+    return { startTime, endTime }
+  }
+  const plus1h = new Date(startAt.getTime() + 60 * 60 * 1000)
+  const startDay = new Date(`${eventDate}T12:00:00`)
+  const sameCalendarDay =
+    plus1h.getFullYear() === startDay.getFullYear() &&
+    plus1h.getMonth() === startDay.getMonth() &&
+    plus1h.getDate() === startDay.getDate()
+  if (sameCalendarDay) {
+    return { startTime, endTime: formatTime(plus1h) }
+  }
+  return { startTime, endTime: "23:59" }
 }
 
 export function toEventDTO(event: Event): EventDTO {
@@ -50,7 +71,7 @@ export function toEventDTO(event: Event): EventDTO {
     title: event.title,
     description: event.description ?? "",
     location: event.location ?? "",
-    eventDate: formatDate(event.startAt),
+    eventDate: formatISODateLocal(event.startAt),
     startTime: formatTime(event.startAt),
     endTime: formatTime(event.endAt),
     color: event.color,
@@ -97,8 +118,9 @@ export async function getEventsForDate(userId: string, date: string) {
 }
 
 export async function createEventForUser(userId: string, input: CreateEventInput, allowConflict = false) {
-  const startAt = toDateTime(input.eventDate, input.startTime)
-  const endAt = toDateTime(input.eventDate, input.endTime)
+  const { startTime: st, endTime: et } = ensureEndAfterStart(input.eventDate, input.startTime, input.endTime)
+  const startAt = toDateTime(input.eventDate, st)
+  const endAt = toDateTime(input.eventDate, et)
 
   if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
     throw new Error("Fecha u hora inválida")
@@ -144,12 +166,13 @@ export async function updateEventForUser(
     return { event: null, conflicts: [], notFound: true as const }
   }
 
-  const nextDate = input.eventDate ?? formatDate(existing.startAt)
+  const nextDate = input.eventDate ?? formatISODateLocal(existing.startAt)
   const nextStartTime = input.startTime ?? formatTime(existing.startAt)
   const nextEndTime = input.endTime ?? formatTime(existing.endAt)
+  const { startTime: st, endTime: et } = ensureEndAfterStart(nextDate, nextStartTime, nextEndTime)
 
-  const startAt = toDateTime(nextDate, nextStartTime)
-  const endAt = toDateTime(nextDate, nextEndTime)
+  const startAt = toDateTime(nextDate, st)
+  const endAt = toDateTime(nextDate, et)
 
   if (startAt >= endAt) {
     throw new Error("La hora de fin debe ser mayor que la hora de inicio")

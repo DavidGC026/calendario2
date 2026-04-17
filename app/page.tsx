@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
-import { DefaultChatTransport } from "ai"
+import { DefaultChatTransport, isReasoningUIPart, isTextUIPart, isToolUIPart } from "ai"
 import {
   ChevronLeft,
   ChevronRight,
@@ -28,6 +28,7 @@ import { CalendarWeekGrid } from "@/components/calendar-week-grid"
 import {
   addDays,
   eventBlockStyle,
+  formatISODateLocal,
   formatWeekRangeLabel,
   getWeekDates,
 } from "@/lib/calendar-view-utils"
@@ -58,7 +59,7 @@ type EventPayload = {
 
 const initialForm: EventPayload = {
   title: "",
-  eventDate: new Date().toISOString().slice(0, 10),
+  eventDate: formatISODateLocal(new Date()),
   startTime: "09:00",
   endTime: "10:00",
   description: "",
@@ -269,6 +270,43 @@ const copy = {
   },
 } as const
 
+function summarizeToolOutput(output: unknown, language: Locale): string {
+  if (output === null || output === undefined) return ""
+  if (typeof output !== "object") return String(output)
+  const o = output as Record<string, unknown>
+  if (o.success === false) {
+    if (typeof o.error === "string") return o.error
+    if (typeof o.message === "string") return o.message
+    if (Array.isArray(o.conflicts) && o.conflicts.length > 0) {
+      return language === "es" ? "Conflicto de horario con otros eventos." : "Schedule conflict with existing events."
+    }
+  }
+  if (o.success === true && o.event && typeof o.event === "object") {
+    const ev = o.event as { title?: string; eventDate?: string; startTime?: string; endTime?: string }
+    return language === "es"
+      ? `Listo: «${ev.title ?? "?"}» el ${ev.eventDate ?? ""} de ${ev.startTime ?? ""} a ${ev.endTime ?? ""}.`
+      : `Done: "${ev.title ?? "?"}" on ${ev.eventDate ?? ""} ${ev.startTime ?? ""}–${ev.endTime ?? ""}.`
+  }
+  if (o.success === true && !o.event) {
+    return language === "es" ? "Operación completada." : "Operation completed."
+  }
+  if ("message" in o && typeof o.message === "string") return o.message
+  if ("hasConflicts" in o) {
+    return language === "es"
+      ? o.hasConflicts
+        ? "Hay solapamientos en ese horario."
+        : "Sin conflictos en ese horario."
+      : o.hasConflicts
+        ? "Overlaps found."
+        : "No overlaps."
+  }
+  try {
+    return JSON.stringify(output, null, 0)
+  } catch {
+    return String(output)
+  }
+}
+
 const glassPanel =
   "rounded-2xl border border-white/20 bg-gradient-to-br from-white/15 via-white/8 to-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl"
 const glassInset = "rounded-xl border border-white/15 bg-white/5 backdrop-blur-md"
@@ -280,7 +318,7 @@ export default function HomePage() {
   const isAdmin = session?.user?.role === "ADMIN"
   const [language, setLanguage] = useState<Locale>("es")
   const t = copy[language]
-  const today = new Date().toISOString().slice(0, 10)
+  const today = formatISODateLocal(new Date())
 
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loadingEvents, setLoadingEvents] = useState(true)
@@ -326,7 +364,7 @@ export default function HomePage() {
     transport: new DefaultChatTransport({
       api: "/api/chat",
       prepareSendMessagesRequest: ({ messages }) => ({
-        body: { messages, locale: language },
+        body: { messages, locale: language, today: formatISODateLocal(new Date()) },
       }),
     }),
     onError: (error) => setChatError(error.message),
@@ -1121,7 +1159,7 @@ export default function HomePage() {
                     className={`${glassInset} px-4 py-2 text-sm text-white/90 transition hover:bg-white/10`}
                     onClick={() => {
                       setEditingEventId(null)
-                      setEventForm({ ...initialForm, eventDate: new Date().toISOString().slice(0, 10) })
+                      setEventForm({ ...initialForm, eventDate: formatISODateLocal(new Date()) })
                     }}
                   >
                     {t.cancelEdit}
@@ -1304,24 +1342,59 @@ export default function HomePage() {
               {messages.length === 0 ? (
                 <p className="text-sm text-white/45">{t.noMessages}</p>
               ) : (
-                messages.map((message) => {
-                  const text = message.parts
-                    .filter((part) => part.type === "text")
-                    .map((part) => ("text" in part ? part.text : ""))
-                    .join("")
-                  return (
-                    <div key={message.id} className="text-sm text-white/90">
-                      <p className="mb-1 text-xs uppercase tracking-wide text-white/45">
-                        {message.role === "user"
-                          ? t.roleUser
-                          : message.role === "assistant"
-                            ? t.roleAssistant
-                            : message.role}
-                      </p>
-                      <p className="text-white/85">{text || t.structuredResponse}</p>
+                messages.map((message) => (
+                  <div key={message.id} className="text-sm text-white/90">
+                    <p className="mb-1 text-xs uppercase tracking-wide text-white/45">
+                      {message.role === "user"
+                        ? t.roleUser
+                        : message.role === "assistant"
+                          ? t.roleAssistant
+                          : message.role}
+                    </p>
+                    <div className="space-y-2">
+                      {message.parts.map((part, pi) => {
+                        if (isReasoningUIPart(part)) return null
+                        if (isTextUIPart(part)) {
+                          return part.text ? (
+                            <p key={pi} className="whitespace-pre-wrap text-white/85">
+                              {part.text}
+                            </p>
+                          ) : null
+                        }
+                        if (isToolUIPart(part)) {
+                          const toolName = part.type.startsWith("tool-")
+                            ? part.type.slice(5)
+                            : part.type
+                          const out =
+                            part.state === "output-available" && "output" in part
+                              ? (part as { output?: unknown }).output
+                              : undefined
+                          const pending =
+                            part.state === "input-streaming" || part.state === "input-available"
+                          return (
+                            <div
+                              key={pi}
+                              className="rounded-lg border border-white/10 bg-white/[0.06] p-2 text-xs"
+                            >
+                              <p className="font-medium text-sky-200/90">{toolName}</p>
+                              {pending ? (
+                                <p className="text-white/50">
+                                  {language === "es" ? "Ejecutando…" : "Running…"}
+                                </p>
+                              ) : (
+                                <p className="text-white/85">
+                                  {summarizeToolOutput(out, language) ||
+                                    (language === "es" ? "(sin salida)" : "(no output)")}
+                                </p>
+                              )}
+                            </div>
+                          )
+                        }
+                        return null
+                      })}
                     </div>
-                  )
-                })
+                  </div>
+                ))
               )}
             </div>
             <div className="mt-3 flex gap-2">
