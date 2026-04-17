@@ -13,6 +13,7 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
+  Copy,
   ImagePlus,
   Loader2,
   LogOut,
@@ -22,6 +23,7 @@ import {
   Settings,
   Sparkles,
   Trash2,
+  UserPlus,
 } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
 import { useChat } from "@ai-sdk/react"
@@ -53,8 +55,19 @@ type CalendarEvent = {
   endTime: string
   color: string
   attendees: string[]
+  participantUserIds: string[]
+  participants: { id: string; name: string | null; email: string }[]
   organizer: string
   day: number
+}
+
+type FriendRow = { id: string; email: string; name: string | null }
+type FriendRequestRow = {
+  id: string
+  fromUserId: string
+  toUserId: string
+  fromUser?: FriendRow
+  toUser?: FriendRow
 }
 
 type EventPayload = {
@@ -65,6 +78,16 @@ type EventPayload = {
   description?: string
   location?: string
   color?: string
+  /** Texto multilínea; al guardar se convierte en `attendees`. */
+  attendeesText: string
+  participantUserIds: string[]
+}
+
+function attendeesFromText(s: string): string[] {
+  return s
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean)
 }
 
 const initialForm: EventPayload = {
@@ -75,6 +98,8 @@ const initialForm: EventPayload = {
   description: "",
   location: "",
   color: "bg-blue-500",
+  attendeesText: "",
+  participantUserIds: [],
 }
 
 const MAX_DATE = "2040-12-31"
@@ -143,6 +168,22 @@ const copy = {
     passwordMismatch: "Las contraseñas nuevas no coinciden",
     passwordSuccess: "Contraseña actualizada. Vuelve a iniciar sesión si es necesario.",
     passwordError: "No se pudo actualizar la contraseña",
+    myUserId: "Tu ID de usuario",
+    copyId: "Copiar",
+    copied: "Copiado",
+    friendIdPlaceholder: "ID del amigo",
+    sendFriendRequest: "Enviar solicitud",
+    friendRequestsIncoming: "Solicitudes de amistad",
+    friendRequestsOutgoing: "Solicitudes enviadas (pendientes)",
+    acceptFriend: "Aceptar",
+    rejectFriend: "Rechazar",
+    noIncomingFriends: "No hay solicitudes pendientes",
+    friendsList: "Amigos",
+    eventPeopleTitle: "Personas",
+    eventFriendsHint: "Marca amigos para incluirlos en el evento",
+    eventOtherNamesHint: "Otros nombres (opcional, uno por línea)",
+    friendRequestSent: "Solicitud enviada",
+    friendRequestError: "No se pudo enviar la solicitud",
     adminPanel: "Administración",
     adminUsers: "Usuarios",
     adminRole: "Rol",
@@ -240,6 +281,22 @@ const copy = {
     passwordMismatch: "New passwords do not match",
     passwordSuccess: "Password updated.",
     passwordError: "Could not update password",
+    myUserId: "Your user ID",
+    copyId: "Copy",
+    copied: "Copied",
+    friendIdPlaceholder: "Friend's user ID",
+    sendFriendRequest: "Send request",
+    friendRequestsIncoming: "Friend requests",
+    friendRequestsOutgoing: "Outgoing (pending)",
+    acceptFriend: "Accept",
+    rejectFriend: "Decline",
+    noIncomingFriends: "No pending requests",
+    friendsList: "Friends",
+    eventPeopleTitle: "People",
+    eventFriendsHint: "Include accepted friends on this event",
+    eventOtherNamesHint: "Other names (optional, one per line)",
+    friendRequestSent: "Request sent",
+    friendRequestError: "Could not send request",
     adminPanel: "Administration",
     adminUsers: "Users",
     adminRole: "Role",
@@ -407,6 +464,14 @@ export default function HomePage() {
   >([])
   const [loadingAdmin, setLoadingAdmin] = useState(false)
 
+  const [friends, setFriends] = useState<FriendRow[]>([])
+  const [incomingRequests, setIncomingRequests] = useState<FriendRequestRow[]>([])
+  const [outgoingRequests, setOutgoingRequests] = useState<FriendRequestRow[]>([])
+  const [friendIdInput, setFriendIdInput] = useState("")
+  const [friendActionMsg, setFriendActionMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null)
+  const [sendingFriendRequest, setSendingFriendRequest] = useState(false)
+  const [copiedId, setCopiedId] = useState(false)
+
   const userId = session?.user?.id
   const chatId = userId ?? "calendar-ai-pending"
   const chatStorageKey = userId ? `${CHAT_STORAGE_PREFIX}${userId}` : null
@@ -448,6 +513,60 @@ export default function HomePage() {
       /* ignore */
     }
   }, [chatStorageKey, setMessages])
+
+  async function loadFriendsData() {
+    const res = await fetch("/api/friends")
+    if (!res.ok) return
+    const data = await res.json()
+    setFriends(data.friends ?? [])
+    setIncomingRequests(data.incoming ?? [])
+    setOutgoingRequests(data.outgoing ?? [])
+  }
+
+  useEffect(() => {
+    if (sessionStatus !== "authenticated") return
+    void loadFriendsData()
+  }, [sessionStatus])
+
+  useEffect(() => {
+    if (createOpen && sessionStatus === "authenticated") void loadFriendsData()
+  }, [createOpen, sessionStatus])
+
+  useEffect(() => {
+    if (settingsOpen && sessionStatus === "authenticated") void loadFriendsData()
+  }, [settingsOpen, sessionStatus])
+
+  async function sendFriendRequestAction() {
+    if (!friendIdInput.trim()) return
+    setSendingFriendRequest(true)
+    setFriendActionMsg(null)
+    const res = await fetch("/api/friends/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetUserId: friendIdInput.trim() }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setSendingFriendRequest(false)
+    if (!res.ok) {
+      setFriendActionMsg({ type: "err", text: data.error ?? t.friendRequestError })
+      return
+    }
+    setFriendIdInput("")
+    setFriendActionMsg({
+      type: "ok",
+      text: data.autoAccepted ? (language === "es" ? "¡Ahora sois amigos!" : "You're now friends!") : t.friendRequestSent,
+    })
+    await loadFriendsData()
+  }
+
+  async function respondFriendRequest(requestId: string, accept: boolean) {
+    const res = await fetch("/api/friends/respond", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId, accept }),
+    })
+    if (res.ok) await loadFriendsData()
+  }
 
   const submitAiChat = () => {
     if (status === "streaming") return
@@ -667,11 +786,18 @@ export default function HomePage() {
     setCreatingEvent(true)
     setEventConflict([])
 
+    const { attendeesText, ...rest } = payload
+    const body = {
+      ...rest,
+      attendees: attendeesFromText(attendeesText),
+      allowConflict,
+    }
+
     const isEditing = Boolean(editingEventId)
     const response = await fetch(isEditing ? `/api/events/${editingEventId}` : "/api/events", {
       method: isEditing ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, allowConflict }),
+      body: JSON.stringify(body),
     })
 
     const data = await response.json()
@@ -720,6 +846,8 @@ export default function HomePage() {
       description: parsed.description ?? "",
       location: parsed.location ?? "",
       color: "bg-blue-500",
+      attendeesText: "",
+      participantUserIds: [],
     })
     setNaturalInput("")
   }
@@ -742,6 +870,8 @@ export default function HomePage() {
       description: event.description,
       location: event.location,
       color: event.color,
+      attendeesText: event.attendees?.length ? event.attendees.join("\n") : "",
+      participantUserIds: [...(event.participantUserIds ?? [])],
     })
     setEventConflict([])
     setEventsError("")
@@ -1258,6 +1388,49 @@ export default function HomePage() {
                 value={eventForm.description}
                 onChange={(e) => setEventForm((prev) => ({ ...prev, description: e.target.value }))}
               />
+              <div className="rounded-xl border border-white/15 bg-white/[0.04] p-3">
+                <p className="mb-2 text-sm font-medium text-white/90">{t.eventPeopleTitle}</p>
+                <p className="mb-3 text-xs text-white/50">{t.eventFriendsHint}</p>
+                {friends.length === 0 ? (
+                  <p className="text-xs text-white/40">
+                    {language === "es"
+                      ? "Añade amigos desde Configuración con su ID."
+                      : "Add friends from Settings using their ID."}
+                  </p>
+                ) : (
+                  <ul className="mb-3 max-h-40 space-y-2 overflow-y-auto">
+                    {friends.map((f) => (
+                      <li key={f.id} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`friend-${f.id}`}
+                          checked={eventForm.participantUserIds.includes(f.id)}
+                          onChange={() =>
+                            setEventForm((prev) => ({
+                              ...prev,
+                              participantUserIds: prev.participantUserIds.includes(f.id)
+                                ? prev.participantUserIds.filter((x) => x !== f.id)
+                                : [...prev.participantUserIds, f.id],
+                            }))
+                          }
+                          className="h-4 w-4 rounded border-white/30 bg-white/10"
+                        />
+                        <label htmlFor={`friend-${f.id}`} className="cursor-pointer text-sm text-white/85">
+                          {f.name ?? f.email}
+                          <span className="ml-1 text-[10px] text-white/35">{f.id.slice(0, 8)}…</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <label className="mb-1 block text-xs text-white/55">{t.eventOtherNamesHint}</label>
+                <textarea
+                  className={`${inputGlass} min-h-[4rem] resize-y font-mono text-sm`}
+                  value={eventForm.attendeesText}
+                  onChange={(e) => setEventForm((prev) => ({ ...prev, attendeesText: e.target.value }))}
+                  placeholder={language === "es" ? "Ana\nEquipo ventas" : "Ana\nSales team"}
+                />
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   disabled={creatingEvent}
@@ -1389,6 +1562,127 @@ export default function HomePage() {
                   </p>
                 ) : null}
               </div>
+
+              <div className="border-t border-white/10 pt-4">
+                <h3 className="font-medium text-white/90">{t.myUserId}</h3>
+                <p className="mt-1 text-xs text-white/45">
+                  {language === "es"
+                    ? "Comparte este ID para que otros te envíen una solicitud de amistad."
+                    : "Share this ID so others can send you a friend request."}
+                </p>
+                <div className="mt-2 flex flex-wrap items-stretch gap-2">
+                  <code className="min-w-0 flex-1 break-all rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-xs text-white/85">
+                    {session?.user?.id ?? "—"}
+                  </code>
+                  <button
+                    type="button"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm transition hover:bg-white/15"
+                    onClick={async () => {
+                      if (!session?.user?.id) return
+                      await navigator.clipboard.writeText(session.user.id)
+                      setCopiedId(true)
+                      setTimeout(() => setCopiedId(false), 2000)
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    {copiedId ? t.copied : t.copyId}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <h3 className="flex items-center gap-2 font-medium text-white/90">
+                  <UserPlus className="h-4 w-4 text-sky-300" />
+                  {language === "es" ? "Añadir amigo" : "Add friend"}
+                </h3>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    className={inputGlass}
+                    placeholder={t.friendIdPlaceholder}
+                    value={friendIdInput}
+                    onChange={(e) => setFriendIdInput(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    disabled={sendingFriendRequest || !friendIdInput.trim()}
+                    onClick={() => void sendFriendRequestAction()}
+                    className="shrink-0 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
+                  >
+                    {sendingFriendRequest ? "…" : t.sendFriendRequest}
+                  </button>
+                </div>
+                {friendActionMsg ? (
+                  <p
+                    className={`mt-2 text-sm ${friendActionMsg.type === "ok" ? "text-green-400" : "text-red-400"}`}
+                  >
+                    {friendActionMsg.text}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <h3 className="text-sm font-medium text-white/90">{t.friendRequestsIncoming}</h3>
+                {incomingRequests.length === 0 ? (
+                  <p className="mt-2 text-sm text-white/40">{t.noIncomingFriends}</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {incomingRequests.map((req) => (
+                      <li
+                        key={req.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-sm"
+                      >
+                        <span className="text-white/85">
+                          {req.fromUser?.name ?? req.fromUser?.email ?? req.fromUserId}
+                        </span>
+                        <span className="flex gap-1">
+                          <button
+                            type="button"
+                            className="rounded-md bg-emerald-500/30 px-2 py-1 text-xs text-emerald-100"
+                            onClick={() => void respondFriendRequest(req.id, true)}
+                          >
+                            {t.acceptFriend}
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-md bg-white/10 px-2 py-1 text-xs text-white/80"
+                            onClick={() => void respondFriendRequest(req.id, false)}
+                          >
+                            {t.rejectFriend}
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {outgoingRequests.length > 0 ? (
+                <div className="mt-4 border-t border-white/10 pt-4">
+                  <h3 className="text-sm font-medium text-white/90">{t.friendRequestsOutgoing}</h3>
+                  <ul className="mt-2 space-y-1 text-sm text-white/55">
+                    {outgoingRequests.map((req) => (
+                      <li key={req.id}>
+                        → {req.toUser?.name ?? req.toUser?.email ?? req.toUserId}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {friends.length > 0 ? (
+                <div className="mt-4 border-t border-white/10 pt-4">
+                  <h3 className="text-sm font-medium text-white/90">{t.friendsList}</h3>
+                  <ul className="mt-2 space-y-1 text-sm text-white/75">
+                    {friends.map((f) => (
+                      <li key={f.id}>
+                        {f.name ?? f.email}{" "}
+                        <span className="text-[10px] text-white/35">({f.id.slice(0, 10)}…)</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
               {isAdmin ? (
                 <div className="border-t border-white/10 pt-4">
                   <h3 className="font-medium">{t.adminPanel}</h3>

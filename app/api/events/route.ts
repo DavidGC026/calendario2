@@ -12,6 +12,7 @@ const createEventSchema = z.object({
   location: z.string().optional().nullable(),
   color: z.string().optional().nullable(),
   attendees: z.array(z.string()).optional().nullable(),
+  participantUserIds: z.array(z.string()).optional().nullable(),
   organizer: z.string().optional().nullable(),
   allowConflict: z.boolean().optional(),
 })
@@ -42,7 +43,13 @@ export async function POST(req: Request) {
   }
 
   const { allowConflict = false, ...input } = parsed.data
-  const result = await createEventForUser(userId, input, allowConflict)
+  let result
+  try {
+    result = await createEventForUser(userId, input, allowConflict)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return Response.json({ error: msg }, { status: 400 })
+  }
   if (!result.event) {
     return Response.json(
       { error: "Conflicto de horario", conflicts: result.conflicts },

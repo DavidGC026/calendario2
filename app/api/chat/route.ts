@@ -140,6 +140,10 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
           location: z.string().optional(),
           color: calendarColorSchema,
           attendees: z.array(z.string()).optional(),
+          participantUserIds: z
+            .array(z.string())
+            .optional()
+            .describe("IDs de usuario amigos (solo amistad aceptada)"),
           organizer: z.string().optional(),
           allowConflict: z.boolean().optional(),
         }),
@@ -177,6 +181,7 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
           location: z.string().nullable().optional(),
           color: calendarColorSchema,
           attendees: z.array(z.string()).optional(),
+          participantUserIds: z.array(z.string()).optional(),
           organizer: z.string().optional(),
           allowConflict: z.boolean().optional(),
         }),

@@ -87,7 +87,13 @@ export function formatEventLineForContext(e: EventDTO, isEnglish: boolean): stri
       : LANE_BY_ID[e.color].es
     : e.color
   const tail = e.description ? `: ${e.description}` : ""
+  const people =
+    e.participants?.length > 0
+      ? isEnglish
+        ? ` (with ${e.participants.map((p) => p.name ?? p.email).join(", ")})`
+        : ` (con ${e.participants.map((p) => p.name ?? p.email).join(", ")})`
+      : ""
   return isEnglish
-    ? `- ${e.title} on ${e.eventDate} from ${e.startTime} to ${e.endTime} [${lane}]${tail}`
-    : `- ${e.title} el ${e.eventDate} de ${e.startTime} a ${e.endTime} [${lane}]${tail}`
+    ? `- ${e.title} on ${e.eventDate} from ${e.startTime} to ${e.endTime} [${lane}]${people}${tail}`
+    : `- ${e.title} el ${e.eventDate} de ${e.startTime} a ${e.endTime} [${lane}]${people}${tail}`
 }

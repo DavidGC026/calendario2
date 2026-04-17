@@ -13,6 +13,7 @@ const updateEventSchema = z
     location: z.string().optional().nullable(),
     color: z.string().optional().nullable(),
     attendees: z.array(z.string()).optional().nullable(),
+    participantUserIds: z.array(z.string()).optional().nullable(),
     organizer: z.string().optional().nullable(),
     allowConflict: z.boolean().optional(),
   })
@@ -41,7 +42,13 @@ export async function PATCH(req: Request, { params }: RouteParams) {
   }
 
   const { allowConflict = false, ...input } = parsed.data
-  const result = await updateEventForUser(userId, id, input, allowConflict)
+  let result
+  try {
+    result = await updateEventForUser(userId, id, input, allowConflict)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return Response.json({ error: msg }, { status: 400 })
+  }
   if (result.notFound) {
     return Response.json({ error: "Evento no encontrado" }, { status: 404 })
   }

@@ -17,6 +17,9 @@ type CalendarEvent = {
   eventDate: string
   startTime: string
   endTime: string
+  color?: string
+  attendees?: string[]
+  participants?: { id: string; name: string | null; email: string }[]
 }
 
 const CALENDAR_LANE_COLORS = [
@@ -222,6 +225,14 @@ export function CalendarSidebarContent({
                       <p className="mt-0.5 text-[11px] text-white/55">
                         {event.eventDate} · {event.startTime} – {event.endTime}
                       </p>
+                      {(event.participants?.length || event.attendees?.length) ? (
+                        <p className="mt-1 line-clamp-2 text-[10px] text-sky-200/90">
+                          {[
+                            ...(event.participants?.map((p) => p.name ?? p.email) ?? []),
+                            ...(event.attendees ?? []),
+                          ].join(" · ")}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex shrink-0 gap-1">
                       <button

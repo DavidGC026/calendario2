@@ -1,7 +1,14 @@
 import { type Event } from "@prisma/client"
 
 import { formatISODateLocal } from "@/lib/calendar-view-utils"
+import { validateParticipantIdsAreFriends } from "@/lib/friends"
 import { prisma } from "@/lib/prisma"
+
+export type EventParticipant = {
+  id: string
+  name: string | null
+  email: string
+}
 
 export type EventDTO = {
   id: string
@@ -13,6 +20,8 @@ export type EventDTO = {
   endTime: string
   color: string
   attendees: string[]
+  participantUserIds: string[]
+  participants: EventParticipant[]
   organizer: string
   day: number
 }
@@ -26,6 +35,7 @@ type CreateEventInput = {
   location?: string | null
   color?: string | null
   attendees?: string[] | null
+  participantUserIds?: string[] | null
   organizer?: string | null
 }
 
@@ -40,7 +50,6 @@ function formatTime(date: Date): string {
   const minutes = String(date.getMinutes()).padStart(2, "0")
   return `${hours}:${minutes}`
 }
-
 
 /** Si fin <= inicio (p. ej. "desde la 1pm" sin duración), ajusta fin a +1 h el mismo día o 23:59 si cruza medianoche. */
 export function ensureEndAfterStart(
@@ -65,7 +74,20 @@ export function ensureEndAfterStart(
   return { startTime, endTime: "23:59" }
 }
 
-export function toEventDTO(event: Event): EventDTO {
+async function loadParticipants(ids: string[]): Promise<EventParticipant[]> {
+  const unique = [...new Set(ids)].filter(Boolean)
+  if (unique.length === 0) return []
+  const users = await prisma.user.findMany({
+    where: { id: { in: unique } },
+    select: { id: true, email: true, name: true },
+  })
+  const order = new Map(unique.map((id, i) => [id, i]))
+  return users.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+}
+
+export async function toEventDTO(event: Event): Promise<EventDTO> {
+  const ids = event.participantUserIds ?? []
+  const participants = await loadParticipants(ids)
   return {
     id: event.id,
     title: event.title,
@@ -76,6 +98,8 @@ export function toEventDTO(event: Event): EventDTO {
     endTime: formatTime(event.endAt),
     color: event.color,
     attendees: event.attendees,
+    participantUserIds: ids,
+    participants,
     organizer: event.organizer ?? "You",
     day: event.startAt.getDate(),
   }
@@ -99,7 +123,7 @@ export async function listEventsForUser(userId: string) {
     orderBy: [{ startAt: "asc" }],
   })
 
-  return events.map(toEventDTO)
+  return Promise.all(events.map(toEventDTO))
 }
 
 export async function getEventsForDate(userId: string, date: string) {
@@ -114,10 +138,18 @@ export async function getEventsForDate(userId: string, date: string) {
     orderBy: [{ startAt: "asc" }],
   })
 
-  return events.map(toEventDTO)
+  return Promise.all(events.map(toEventDTO))
 }
 
 export async function createEventForUser(userId: string, input: CreateEventInput, allowConflict = false) {
+  const participantUserIds = [...new Set(input.participantUserIds ?? [])].filter(Boolean)
+  if (participantUserIds.length > 0) {
+    const ok = await validateParticipantIdsAreFriends(userId, participantUserIds)
+    if (!ok) {
+      throw new Error("Solo puedes añadir como participantes a usuarios con los que tengas amistad aceptada")
+    }
+  }
+
   const { startTime: st, endTime: et } = ensureEndAfterStart(input.eventDate, input.startTime, input.endTime)
   const startAt = toDateTime(input.eventDate, st)
   const endAt = toDateTime(input.eventDate, et)
@@ -132,7 +164,7 @@ export async function createEventForUser(userId: string, input: CreateEventInput
 
   const conflicts = await findOverlaps(userId, startAt, endAt)
   if (!allowConflict && conflicts.length > 0) {
-    return { event: null, conflicts: conflicts.map(toEventDTO) }
+    return { event: null, conflicts: await Promise.all(conflicts.map(toEventDTO)) }
   }
 
   const event = await prisma.event.create({
@@ -145,11 +177,12 @@ export async function createEventForUser(userId: string, input: CreateEventInput
       endAt,
       color: input.color ?? "bg-blue-500",
       attendees: input.attendees ?? [],
+      participantUserIds,
       organizer: input.organizer ?? "You",
     },
   })
 
-  return { event: toEventDTO(event), conflicts: conflicts.map(toEventDTO) }
+  return { event: await toEventDTO(event), conflicts: await Promise.all(conflicts.map(toEventDTO)) }
 }
 
 export async function updateEventForUser(
@@ -166,6 +199,16 @@ export async function updateEventForUser(
     return { event: null, conflicts: [], notFound: true as const }
   }
 
+  if (input.participantUserIds !== undefined && input.participantUserIds !== null) {
+    const ids = [...new Set(input.participantUserIds)].filter(Boolean)
+    if (ids.length > 0) {
+      const ok = await validateParticipantIdsAreFriends(userId, ids)
+      if (!ok) {
+        throw new Error("Solo puedes añadir como participantes a usuarios con los que tengas amistad aceptada")
+      }
+    }
+  }
+
   const nextDate = input.eventDate ?? formatISODateLocal(existing.startAt)
   const nextStartTime = input.startTime ?? formatTime(existing.startAt)
   const nextEndTime = input.endTime ?? formatTime(existing.endAt)
@@ -180,8 +223,13 @@ export async function updateEventForUser(
 
   const conflicts = await findOverlaps(userId, startAt, endAt, eventId)
   if (!allowConflict && conflicts.length > 0) {
-    return { event: null, conflicts: conflicts.map(toEventDTO), notFound: false as const }
+    return { event: null, conflicts: await Promise.all(conflicts.map(toEventDTO)), notFound: false as const }
   }
+
+  const nextParticipants =
+    input.participantUserIds !== undefined && input.participantUserIds !== null
+      ? [...new Set(input.participantUserIds)].filter(Boolean)
+      : existing.participantUserIds
 
   const event = await prisma.event.update({
     where: { id: eventId },
@@ -193,11 +241,12 @@ export async function updateEventForUser(
       endAt,
       color: input.color ?? existing.color,
       attendees: input.attendees ?? existing.attendees,
+      participantUserIds: nextParticipants,
       organizer: input.organizer ?? existing.organizer,
     },
   })
 
-  return { event: toEventDTO(event), conflicts: conflicts.map(toEventDTO), notFound: false as const }
+  return { event: await toEventDTO(event), conflicts: await Promise.all(conflicts.map(toEventDTO)), notFound: false as const }
 }
 
 export async function deleteEventForUser(userId: string, eventId: string) {
@@ -222,5 +271,5 @@ export async function findConflictsForUser(
   const startAt = toDateTime(date, startTime)
   const endAt = toDateTime(date, endTime)
   const overlaps = await findOverlaps(userId, startAt, endAt, excludeEventId)
-  return overlaps.map(toEventDTO)
+  return Promise.all(overlaps.map(toEventDTO))
 }
