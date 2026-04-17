@@ -96,6 +96,24 @@ const copy = {
     parseError: "No pude interpretar ese evento. Intenta con más detalle.",
     roleUser: "Usuario",
     roleAssistant: "Asistente",
+    changePassword: "Cambiar contraseña",
+    currentPassword: "Contraseña actual",
+    newPassword: "Nueva contraseña",
+    confirmPassword: "Confirmar nueva contraseña",
+    savePassword: "Actualizar contraseña",
+    passwordMismatch: "Las contraseñas nuevas no coinciden",
+    passwordSuccess: "Contraseña actualizada. Vuelve a iniciar sesión si es necesario.",
+    passwordError: "No se pudo actualizar la contraseña",
+    adminPanel: "Administración",
+    adminUsers: "Usuarios",
+    adminRole: "Rol",
+    adminEmail: "Correo",
+    adminMakeAdmin: "Hacer administrador",
+    adminMakeUser: "Quitar administrador",
+    adminLoading: "Cargando usuarios...",
+    adminForbidden: "Solo administradores",
+    roleAdmin: "Administrador",
+    roleUserLabel: "Usuario",
   },
   en: {
     title: "Smart Calendar",
@@ -143,11 +161,30 @@ const copy = {
     parseError: "I could not understand that event. Try with more details.",
     roleUser: "User",
     roleAssistant: "Assistant",
+    changePassword: "Change password",
+    currentPassword: "Current password",
+    newPassword: "New password",
+    confirmPassword: "Confirm new password",
+    savePassword: "Update password",
+    passwordMismatch: "New passwords do not match",
+    passwordSuccess: "Password updated.",
+    passwordError: "Could not update password",
+    adminPanel: "Administration",
+    adminUsers: "Users",
+    adminRole: "Role",
+    adminEmail: "Email",
+    adminMakeAdmin: "Make admin",
+    adminMakeUser: "Remove admin",
+    adminLoading: "Loading users...",
+    adminForbidden: "Admins only",
+    roleAdmin: "Admin",
+    roleUserLabel: "User",
   },
 } as const
 
 export default function HomePage() {
-  const { status: sessionStatus } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
+  const isAdmin = session?.user?.role === "ADMIN"
   const [language, setLanguage] = useState<Locale>("es")
   const t = copy[language]
   const today = new Date().toISOString().slice(0, 10)
@@ -166,6 +203,17 @@ export default function HomePage() {
   const [chatError, setChatError] = useState("")
   const [monthFilter, setMonthFilter] = useState(today.slice(0, 7))
   const [selectedDateFilter, setSelectedDateFilter] = useState("")
+
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [passwordMsg, setPasswordMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null)
+  const [savingPassword, setSavingPassword] = useState(false)
+
+  const [adminUsers, setAdminUsers] = useState<
+    { id: string; email: string; name: string | null; role: "USER" | "ADMIN" }[]
+  >([])
+  const [loadingAdmin, setLoadingAdmin] = useState(false)
 
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({
@@ -291,6 +339,60 @@ export default function HomePage() {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
     document.documentElement.lang = language
   }, [language])
+
+  async function loadAdminUsers() {
+    if (!isAdmin) return
+    setLoadingAdmin(true)
+    const res = await fetch("/api/admin/users")
+    setLoadingAdmin(false)
+    if (res.ok) {
+      const data = await res.json()
+      setAdminUsers(data.users ?? [])
+    }
+  }
+
+  useEffect(() => {
+    if (sessionStatus === "authenticated" && isAdmin) {
+      void loadAdminUsers()
+    }
+  }, [sessionStatus, isAdmin])
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault()
+    setPasswordMsg(null)
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg({ type: "err", text: t.passwordMismatch })
+      return
+    }
+    setSavingPassword(true)
+    const res = await fetch("/api/user/password", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    })
+    const data = await res.json()
+    setSavingPassword(false)
+    if (!res.ok) {
+      setPasswordMsg({ type: "err", text: data.error ?? t.passwordError })
+      return
+    }
+    setCurrentPassword("")
+    setNewPassword("")
+    setConfirmPassword("")
+    setPasswordMsg({ type: "ok", text: t.passwordSuccess })
+  }
+
+  async function toggleUserRole(userId: string, currentRole: "USER" | "ADMIN") {
+    const next = currentRole === "ADMIN" ? "USER" : "ADMIN"
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: next }),
+    })
+    if (res.ok) {
+      await loadAdminUsers()
+    }
+  }
 
   async function saveEvent(payload: EventPayload, allowConflict = false) {
     setCreatingEvent(true)
@@ -440,11 +542,114 @@ export default function HomePage() {
           </div>
         </header>
 
-        <section className="mb-6 rounded-xl border border-white/10 bg-white/5 p-4">
-          <h2 className="text-lg font-medium">{t.settings}</h2>
-          <p className="mt-1 text-sm text-slate-300">
-            {t.language}: {language === "es" ? "Espanol" : "English"}
-          </p>
+        <section className="mb-6 rounded-xl border border-white/10 bg-white/5 p-4 space-y-6">
+          <div>
+            <h2 className="text-lg font-medium">{t.settings}</h2>
+            <p className="mt-1 text-sm text-slate-300">
+              {t.language}: {language === "es" ? "Espanol" : "English"}
+            </p>
+            {session?.user?.email ? (
+              <p className="mt-1 text-sm text-slate-400">
+                {session.user.email}
+                {isAdmin ? (
+                  <span className="ml-2 rounded bg-amber-500/20 px-2 py-0.5 text-xs text-amber-200">
+                    {t.roleAdmin}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="border-t border-white/10 pt-4">
+            <h3 className="font-medium">{t.changePassword}</h3>
+            <form className="mt-3 grid max-w-md gap-2" onSubmit={handleChangePassword}>
+              <input
+                type="password"
+                className="rounded-md border border-white/20 bg-slate-900 px-3 py-2"
+                placeholder={t.currentPassword}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+              <input
+                type="password"
+                className="rounded-md border border-white/20 bg-slate-900 px-3 py-2"
+                placeholder={t.newPassword}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={6}
+                required
+              />
+              <input
+                type="password"
+                className="rounded-md border border-white/20 bg-slate-900 px-3 py-2"
+                placeholder={t.confirmPassword}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                minLength={6}
+                required
+              />
+              <button
+                type="submit"
+                disabled={savingPassword}
+                className="w-fit rounded-md bg-slate-700 px-4 py-2 text-sm disabled:opacity-50"
+              >
+                {savingPassword ? "..." : t.savePassword}
+              </button>
+            </form>
+            {passwordMsg ? (
+              <p
+                className={`mt-2 text-sm ${passwordMsg.type === "ok" ? "text-green-400" : "text-red-400"}`}
+              >
+                {passwordMsg.text}
+              </p>
+            ) : null}
+          </div>
+
+          {isAdmin ? (
+            <div className="border-t border-white/10 pt-4">
+              <h3 className="font-medium">{t.adminPanel}</h3>
+              <p className="mt-1 text-sm text-slate-400">{t.adminUsers}</p>
+              {loadingAdmin ? (
+                <p className="mt-2 text-sm text-slate-400">{t.adminLoading}</p>
+              ) : (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 text-slate-400">
+                        <th className="py-2 pr-4">{t.adminEmail}</th>
+                        <th className="py-2 pr-4">{t.adminRole}</th>
+                        <th className="py-2">{t.settings}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminUsers.map((u) => (
+                        <tr key={u.id} className="border-b border-white/5">
+                          <td className="py-2 pr-4">{u.email}</td>
+                          <td className="py-2 pr-4">
+                            {u.role === "ADMIN" ? t.roleAdmin : t.roleUserLabel}
+                          </td>
+                          <td className="py-2">
+                            <button
+                              type="button"
+                              className="rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10"
+                              onClick={() => toggleUserRole(u.id, u.role)}
+                              disabled={u.id === session?.user?.id && u.role === "ADMIN"}
+                            >
+                              {u.role === "ADMIN" ? t.adminMakeUser : t.adminMakeAdmin}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ) : null}
         </section>
 
         <div className="grid gap-6 lg:grid-cols-2">

@@ -40,18 +40,25 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name ?? user.email,
+          role: user.role,
         }
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user?.id) token.sub = user.id
+      if (user?.id) {
+        token.sub = user.id
+        if ("role" in user && user.role) {
+          token.role = user.role
+        }
+      }
       return token
     },
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub
+        session.user.role = (token.role as "USER" | "ADMIN") ?? "USER"
       }
       return session
     },
@@ -65,4 +72,16 @@ export async function getCurrentSession() {
 export async function getCurrentUserId() {
   const session = await getCurrentSession()
   return session?.user?.id
+}
+
+export async function getCurrentUser() {
+  const id = await getCurrentUserId()
+  if (!id) return null
+  return prisma.user.findUnique({ where: { id } })
+}
+
+export async function requireAdmin() {
+  const user = await getCurrentUser()
+  if (!user || user.role !== "ADMIN") return null
+  return user
 }
