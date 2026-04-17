@@ -876,10 +876,11 @@ export default function HomePage() {
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
           <SheetContent
             side="left"
-            className="w-[min(100vw-0.5rem,320px)] border-white/15 bg-slate-950/98 p-0 text-white backdrop-blur-xl sm:max-w-[300px]"
+            className="flex max-h-[100dvh] w-[min(100vw-0.5rem,320px)] flex-col overflow-hidden border-white/15 bg-slate-950/98 p-0 text-white backdrop-blur-xl sm:max-w-[300px]"
           >
-            <div className="h-[100dvh] overflow-y-auto overscroll-contain p-4 pt-safe">
+            <div className="box-border min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-4 pb-safe pt-safe [-webkit-overflow-scrolling:touch]">
               <CalendarSidebarContent
+                mobileDrawer
                 t={t}
                 glassPanel={glassPanel}
                 glassInset={glassInset}

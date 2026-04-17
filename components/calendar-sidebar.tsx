@@ -52,6 +52,8 @@ type CalendarSidebarProps = {
   onEdit: (e: CalendarEvent) => void
   onDelete: (id: string) => void
   listScopeLabel: string
+  /** En el drawer móvil el scroll va en el contenedor exterior; sin flex-1 para que la lista no quede con altura 0. */
+  mobileDrawer?: boolean
 }
 
 export function CalendarSidebarContent({
@@ -78,9 +80,16 @@ export function CalendarSidebarContent({
   onEdit,
   onDelete,
   listScopeLabel,
+  mobileDrawer = false,
 }: CalendarSidebarProps) {
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
+    <div
+      className={
+        mobileDrawer
+          ? "flex flex-col gap-4"
+          : "flex h-full min-h-0 flex-col gap-4"
+      }
+    >
       <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-4">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-6 w-6 text-sky-300" />
@@ -185,10 +194,20 @@ export function CalendarSidebarContent({
         </ul>
       </div>
 
-      <div className={`${glassPanel} flex min-h-0 flex-1 flex-col overflow-hidden p-3`}>
+      <div
+        className={`${glassPanel} flex flex-col p-3 ${
+          mobileDrawer ? "" : "min-h-0 flex-1 overflow-hidden"
+        }`}
+      >
         <h2 className="shrink-0 text-sm font-semibold text-white">{t.eventsPanel}</h2>
         <p className="mb-2 shrink-0 text-[10px] uppercase tracking-wide text-white/40">{listScopeLabel}</p>
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div
+          className={
+            mobileDrawer
+              ? "mt-1 overflow-visible pr-1"
+              : "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
+          }
+        >
           {loadingEvents ? (
             <p className="py-6 text-sm text-white/50">{t.loadingEvents}</p>
           ) : visibleEvents.length === 0 ? (
