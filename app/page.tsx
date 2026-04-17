@@ -1,11 +1,19 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
-import { DefaultChatTransport, isReasoningUIPart, isTextUIPart, isToolUIPart } from "ai"
+import {
+  DefaultChatTransport,
+  isFileUIPart,
+  isReasoningUIPart,
+  isTextUIPart,
+  isToolUIPart,
+  type UIMessage,
+} from "ai"
 import {
   ChevronLeft,
   ChevronRight,
+  ImagePlus,
   Loader2,
   LogOut,
   Menu,
@@ -13,6 +21,7 @@ import {
   Send,
   Settings,
   Sparkles,
+  Trash2,
 } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
 import { useChat } from "@ai-sdk/react"
@@ -25,6 +34,7 @@ import {
 } from "@/components/ui/sheet"
 import { CalendarSidebarContent, type CalendarCell } from "@/components/calendar-sidebar"
 import { CalendarWeekGrid } from "@/components/calendar-week-grid"
+import { CALENDAR_LANE_COLORS, laneLabel } from "@/lib/calendar-lanes"
 import {
   addDays,
   eventBlockStyle,
@@ -74,13 +84,6 @@ type CalendarViewMode = "day" | "week" | "month"
 
 const AI_WELCOME_KEY = "calendar-app-ai-welcome-dismissed"
 
-const CALENDAR_LANE_COLORS = [
-  { id: "bg-blue-500", key: "calPersonal" as const },
-  { id: "bg-green-500", key: "calWork" as const },
-  { id: "bg-orange-500", key: "calPrivate" as const },
-  { id: "bg-purple-500", key: "calFamily" as const },
-] as const
-
 const copy = {
   es: {
     title: "Calendario Inteligente",
@@ -116,10 +119,14 @@ const copy = {
     editEvent: "Editar evento",
     deleteEvent: "Eliminar evento",
     aiTitle: "Asistente IA",
-    aiHelp: "Puedes pedir: crear, editar, eliminar eventos y revisar conflictos de horario.",
+    aiHelp:
+      "Puedes crear, editar o borrar eventos, revisar conflictos, asignar calendario (Trabajo, Personal, Familia…) y adjuntar capturas o fotos. El historial se guarda en este dispositivo.",
     noMessages: "Todavía no hay mensajes.",
     structuredResponse: "Respuesta estructurada recibida (tool result).",
-    chatPlaceholder: "Ej: agenda una reunión con Carlos el lunes a las 15:00",
+    chatPlaceholder: "Texto, captura o pega un mensaje de WhatsApp…",
+    chatAttachImage: "Adjuntar imagen",
+    chatClearHistory: "Borrar historial del chat",
+    chatDefaultImagePrompt: "Extrae fechas y horas de la imagen y agéndalas.",
     authRequired: "Debes iniciar sesión para acceder a tu calendario.",
     goToLogin: "Ir a login",
     loadEventsError: "No se pudieron cargar tus eventos",
@@ -209,10 +216,14 @@ const copy = {
     editEvent: "Edit event",
     deleteEvent: "Delete event",
     aiTitle: "AI Assistant",
-    aiHelp: "You can ask to create, edit, delete events and check schedule conflicts.",
+    aiHelp:
+      "You can create, edit or delete events, check conflicts, pick a calendar lane (Work, Personal, Family…), and attach screenshots or photos. Chat history is stored on this device.",
     noMessages: "No messages yet.",
     structuredResponse: "Structured response received (tool result).",
-    chatPlaceholder: "Ex: schedule a meeting with Carlos on Monday at 3:00 PM",
+    chatPlaceholder: "Type, paste WhatsApp text, or attach a screenshot…",
+    chatAttachImage: "Attach image",
+    chatClearHistory: "Clear chat history",
+    chatDefaultImagePrompt: "Extract dates and times from the image and add them to the calendar.",
     authRequired: "You must sign in to access your calendar.",
     goToLogin: "Go to login",
     loadEventsError: "Could not load your events",
@@ -282,10 +293,18 @@ function summarizeToolOutput(output: unknown, language: Locale): string {
     }
   }
   if (o.success === true && o.event && typeof o.event === "object") {
-    const ev = o.event as { title?: string; eventDate?: string; startTime?: string; endTime?: string }
+    const ev = o.event as {
+      title?: string
+      eventDate?: string
+      startTime?: string
+      endTime?: string
+      color?: string
+    }
+    const lane = ev.color ? laneLabel(language, ev.color) : ""
+    const laneBit = lane ? (language === "es" ? ` · ${lane}` : ` · ${lane}`) : ""
     return language === "es"
-      ? `Listo: «${ev.title ?? "?"}» el ${ev.eventDate ?? ""} de ${ev.startTime ?? ""} a ${ev.endTime ?? ""}.`
-      : `Done: "${ev.title ?? "?"}" on ${ev.eventDate ?? ""} ${ev.startTime ?? ""}–${ev.endTime ?? ""}.`
+      ? `Listo: «${ev.title ?? "?"}» el ${ev.eventDate ?? ""} de ${ev.startTime ?? ""} a ${ev.endTime ?? ""}${laneBit}.`
+      : `Done: "${ev.title ?? "?"}" on ${ev.eventDate ?? ""} ${ev.startTime ?? ""}–${ev.endTime ?? ""}${laneBit}.`
   }
   if (o.success === true && !o.event) {
     return language === "es" ? "Operación completada." : "Operation completed."
@@ -305,6 +324,32 @@ function summarizeToolOutput(output: unknown, language: Locale): string {
   } catch {
     return String(output)
   }
+}
+
+const CHAT_STORAGE_PREFIX = "calendar-app-ai-chat-v1:"
+
+function trimChatForStorage(messages: UIMessage[]): UIMessage[] {
+  const MAX = 50
+  const base = messages.length > MAX ? messages.slice(-MAX) : messages
+  return base.map((m, mi) => {
+    if (m.role !== "user") return m
+    const keepHeavy = mi >= base.length - 3
+    if (keepHeavy) return m
+    return {
+      ...m,
+      parts: m.parts.map((p) => {
+        if (
+          p.type === "file" &&
+          "url" in p &&
+          typeof p.url === "string" &&
+          p.url.startsWith("data:")
+        ) {
+          return { ...p, url: "[adjunto]" }
+        }
+        return p
+      }),
+    }
+  })
 }
 
 const glassPanel =
@@ -331,6 +376,8 @@ export default function HomePage() {
   const [naturalInput, setNaturalInput] = useState("")
   const [parsing, setParsing] = useState(false)
   const [chatInput, setChatInput] = useState("")
+  const [pendingChatFiles, setPendingChatFiles] = useState<File[]>([])
+  const chatFileInputRef = useRef<HTMLInputElement>(null)
   const [chatError, setChatError] = useState("")
   const [anchorDate, setAnchorDate] = useState(today)
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week")
@@ -360,7 +407,12 @@ export default function HomePage() {
   >([])
   const [loadingAdmin, setLoadingAdmin] = useState(false)
 
-  const { messages, sendMessage, status } = useChat({
+  const userId = session?.user?.id
+  const chatId = userId ?? "calendar-ai-pending"
+  const chatStorageKey = userId ? `${CHAT_STORAGE_PREFIX}${userId}` : null
+
+  const { messages, sendMessage, setMessages, status } = useChat({
+    id: chatId,
     transport: new DefaultChatTransport({
       api: "/api/chat",
       prepareSendMessagesRequest: ({ messages }) => ({
@@ -368,10 +420,63 @@ export default function HomePage() {
       }),
     }),
     onError: (error) => setChatError(error.message),
-    onFinish: () => {
+    onFinish: ({ messages: ms }) => {
       void loadEvents()
+      if (!chatStorageKey) return
+      try {
+        localStorage.setItem(chatStorageKey, JSON.stringify(trimChatForStorage(ms)))
+      } catch {
+        try {
+          localStorage.setItem(chatStorageKey, JSON.stringify(ms.slice(-25)))
+        } catch {
+          /* quota */
+        }
+      }
     },
   })
+
+  useEffect(() => {
+    if (!chatStorageKey) return
+    try {
+      const raw = localStorage.getItem(chatStorageKey)
+      if (!raw) return
+      const parsed = JSON.parse(raw) as UIMessage[]
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setMessages(parsed)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [chatStorageKey, setMessages])
+
+  const submitAiChat = () => {
+    if (status === "streaming") return
+    const text = chatInput.trim()
+    if (!text && pendingChatFiles.length === 0) return
+    const prompt =
+      text || (pendingChatFiles.length > 0 ? t.chatDefaultImagePrompt : "")
+    if (pendingChatFiles.length > 0) {
+      const dt = new DataTransfer()
+      pendingChatFiles.forEach((f) => dt.items.add(f))
+      void sendMessage({ text: prompt, files: dt.files })
+    } else {
+      void sendMessage({ text: prompt })
+    }
+    setChatInput("")
+    setPendingChatFiles([])
+    if (chatFileInputRef.current) chatFileInputRef.current.value = ""
+  }
+
+  const clearAiChatHistory = () => {
+    setMessages([])
+    if (chatStorageKey) {
+      try {
+        localStorage.removeItem(chatStorageKey)
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 
   const sortedEvents = useMemo(() => {
     return [...events].sort((a, b) => {
@@ -767,13 +872,13 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(139,92,246,0.25),transparent)]" />
       </div>
 
-      <div className="relative z-10 flex min-h-[100dvh] w-full flex-col md:flex-row">
+      <div className="relative z-10 flex min-h-[100dvh] w-full flex-col pb-safe md:flex-row">
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
           <SheetContent
             side="left"
-            className="w-[300px] border-white/15 bg-slate-950/98 p-0 text-white backdrop-blur-xl sm:max-w-[300px]"
+            className="w-[min(100vw-0.5rem,320px)] border-white/15 bg-slate-950/98 p-0 text-white backdrop-blur-xl sm:max-w-[300px]"
           >
-            <div className="h-[100dvh] overflow-y-auto p-4">
+            <div className="h-[100dvh] overflow-y-auto overscroll-contain p-4 pt-safe">
               <CalendarSidebarContent
                 t={t}
                 glassPanel={glassPanel}
@@ -838,11 +943,12 @@ export default function HomePage() {
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="shrink-0 border-b border-white/10 bg-slate-950/45 px-3 py-3 backdrop-blur-xl md:px-5">
-            <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <div className="shrink-0 border-b border-white/10 bg-slate-950/45 px-safe py-3 backdrop-blur-xl md:px-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 md:gap-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
               <button
                 type="button"
-                className={`${glassInset} inline-flex md:hidden`}
+                className={`${glassInset} inline-flex min-h-11 min-w-11 items-center justify-center md:hidden`}
                 onClick={() => setMobileSidebarOpen(true)}
                 aria-label="Menu"
               >
@@ -851,7 +957,7 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={goToToday}
-                className="rounded-lg bg-sky-500/35 px-3 py-1.5 text-sm font-medium text-sky-100 ring-1 ring-sky-400/35 transition hover:bg-sky-500/45"
+                className="min-h-10 shrink-0 rounded-lg bg-sky-500/35 px-3 py-2 text-sm font-medium text-sky-100 ring-1 ring-sky-400/35 transition hover:bg-sky-500/45"
               >
                 {t.goToday}
               </button>
@@ -859,7 +965,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => navigateCalendar(-1)}
-                  className={`${glassInset} rounded-lg p-2`}
+                  className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2`}
                   aria-label={t.prevMonth}
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -867,25 +973,30 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => navigateCalendar(1)}
-                  className={`${glassInset} rounded-lg p-2`}
+                  className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2`}
                   aria-label={t.nextMonth}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
-              <h2 className="min-w-0 flex-1 text-lg font-semibold capitalize tracking-tight text-white md:text-xl">
+              <h2 className="min-w-0 flex-1 text-base font-semibold capitalize leading-snug tracking-tight text-white sm:text-lg md:text-xl">
                 {navTitle}
               </h2>
-              <div className={`${glassInset} flex min-w-[140px] flex-1 items-center gap-2 px-2 py-1.5 md:max-w-xs md:flex-initial`}>
+              </div>
+              <div
+                className={`${glassInset} order-last flex w-full min-w-0 items-center gap-2 px-3 py-2 sm:order-none sm:w-auto sm:max-w-xs sm:flex-1 md:flex-initial`}
+              >
                 <Search className="h-4 w-4 shrink-0 text-white/45" />
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-white/35"
+                  className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-white/35 sm:text-sm"
                   placeholder={t.searchPlaceholder}
+                  enterKeyHint="search"
                 />
               </div>
-              <div className={`${glassInset} flex items-center gap-1 px-2 py-1.5 text-sm`}>
+              <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+              <div className={`${glassInset} flex min-h-10 items-center gap-1 px-2 py-1.5 text-sm`}>
                 <label className="text-white/50">{t.language}</label>
                 <select
                   value={language}
@@ -903,18 +1014,18 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => setSettingsOpen(true)}
-                className={`${glassInset} rounded-lg p-2`}
+                className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2`}
                 aria-label={t.settings}
               >
                 <Settings className="h-4 w-4" />
               </button>
               <div
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-sky-500 text-sm font-bold text-white ring-2 ring-white/25"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-sky-500 text-sm font-bold text-white ring-2 ring-white/25"
                 title={session?.user?.email ?? ""}
               >
                 {(session?.user?.email?.[0] ?? "U").toUpperCase()}
               </div>
-              <div className="flex w-full justify-center rounded-xl border border-white/15 bg-white/[0.06] p-1 md:ml-auto md:w-auto">
+              <div className="flex w-full justify-center rounded-xl border border-white/15 bg-white/[0.06] p-1 sm:w-auto">
                 {(
                   [
                     ["day", t.viewDay],
@@ -926,7 +1037,7 @@ export default function HomePage() {
                     key={mode}
                     type="button"
                     onClick={() => setViewMode(mode)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    className={`min-h-10 flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition sm:flex-initial sm:px-3 sm:py-1.5 ${
                       viewMode === mode
                         ? "bg-sky-500/45 text-white shadow-md ring-1 ring-sky-400/40"
                         : "text-white/55 hover:text-white/90"
@@ -936,10 +1047,11 @@ export default function HomePage() {
                   </button>
                 ))}
               </div>
+              </div>
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto px-3 py-4 md:px-6">
+          <div className="min-h-0 flex-1 overflow-auto overscroll-contain px-safe py-4 md:px-6">
             {loadingEvents && events.length === 0 ? (
               <div className="flex items-center justify-center gap-2 py-24 text-white/60">
                 <Loader2 className="h-8 w-8 animate-spin text-sky-300" />
@@ -1037,7 +1149,7 @@ export default function HomePage() {
         </div>
 
         {!aiWelcomeDismissed ? (
-          <div className="pointer-events-auto fixed bottom-6 right-4 z-[60] max-w-sm rounded-2xl border border-white/20 bg-slate-950/90 p-4 shadow-[0_12px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl md:right-8">
+          <div className="pointer-events-auto fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-4 right-4 z-[60] mx-auto max-w-sm rounded-2xl border border-white/20 bg-slate-950/90 p-4 shadow-[0_12px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:left-auto sm:right-[max(1.5rem,env(safe-area-inset-right))] sm:mx-0 md:right-8">
             <Sparkles className="mb-2 h-6 w-6 text-sky-300" />
             <p className="font-semibold text-white">{t.aiWelcomeTitle}</p>
             <p className="mt-1 text-sm text-white/70">{t.aiWelcomeBody}</p>
@@ -1065,7 +1177,7 @@ export default function HomePage() {
           <button
             type="button"
             onClick={() => setAiSheetOpen(true)}
-            className="pointer-events-auto fixed bottom-6 right-4 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-sky-500 text-white shadow-xl ring-2 ring-white/30 md:right-8"
+            className="pointer-events-auto fixed z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-sky-500 text-white shadow-xl ring-2 ring-white/30 bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] md:right-8"
             aria-label={t.openChat}
           >
             <Sparkles className="h-6 w-6" />
@@ -1075,7 +1187,7 @@ export default function HomePage() {
         <Sheet open={createOpen} onOpenChange={setCreateOpen}>
           <SheetContent
             side="right"
-            className="w-full max-w-lg overflow-y-auto border-white/15 bg-slate-950/98 text-white backdrop-blur-xl"
+            className="h-[100dvh] max-h-[100dvh] w-full max-w-lg overflow-y-auto border-white/15 bg-slate-950/98 px-4 pb-safe pt-safe text-white backdrop-blur-xl sm:px-6 sm:pb-6"
           >
             <SheetHeader>
               <SheetTitle>{editingEventId ? t.updateEvent : t.sheetCreate}</SheetTitle>
@@ -1094,7 +1206,7 @@ export default function HomePage() {
                 onChange={(e) => setEventForm((prev) => ({ ...prev, title: e.target.value }))}
                 required
               />
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <input
                   className={inputGlass}
                   type="date"
@@ -1210,7 +1322,7 @@ export default function HomePage() {
         <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
           <SheetContent
             side="right"
-            className="w-full max-w-md overflow-y-auto border-white/15 bg-slate-950/98 text-white backdrop-blur-xl"
+            className="h-[100dvh] max-h-[100dvh] w-full max-w-md overflow-y-auto border-white/15 bg-slate-950/98 px-4 pb-safe pt-safe text-white backdrop-blur-xl sm:px-6 sm:pb-6"
           >
             <SheetHeader>
               <SheetTitle>{t.sheetSettings}</SheetTitle>
@@ -1332,13 +1444,23 @@ export default function HomePage() {
         <Sheet open={aiSheetOpen} onOpenChange={setAiSheetOpen}>
           <SheetContent
             side="right"
-            className="w-full max-w-md overflow-y-auto border-white/15 bg-slate-950/98 text-white backdrop-blur-xl"
+            className="flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col overflow-hidden border-white/15 bg-slate-950/98 px-4 pb-safe pt-safe text-white backdrop-blur-xl sm:px-6 sm:pb-6"
           >
-            <SheetHeader>
+            <SheetHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
               <SheetTitle>{t.sheetAi}</SheetTitle>
+              <button
+                type="button"
+                onClick={clearAiChatHistory}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/15 px-2 py-1 text-xs text-white/70 transition hover:bg-white/10"
+                title={t.chatClearHistory}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {t.chatClearHistory}
+              </button>
             </SheetHeader>
-            <p className="mt-2 text-sm text-white/65">{t.aiHelp}</p>
-            <div className={`${glassInset} mt-4 max-h-[50vh] space-y-3 overflow-y-auto p-3`}>
+            <p className="mt-2 shrink-0 text-sm text-white/65">{t.aiHelp}</p>
+            <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3">
+            <div className={`${glassInset} min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3`}>
               {messages.length === 0 ? (
                 <p className="text-sm text-white/45">{t.noMessages}</p>
               ) : (
@@ -1360,6 +1482,24 @@ export default function HomePage() {
                               {part.text}
                             </p>
                           ) : null
+                        }
+                        if (isFileUIPart(part)) {
+                          if (part.mediaType?.startsWith("image/") && part.url && part.url !== "[adjunto]") {
+                            return (
+                              // eslint-disable-next-line @next/next/no-img-element -- data URLs del chat
+                              <img
+                                key={pi}
+                                src={part.url}
+                                alt=""
+                                className="max-h-40 max-w-full rounded-lg border border-white/15 object-contain"
+                              />
+                            )
+                          }
+                          return (
+                            <p key={pi} className="text-xs text-white/45">
+                              {language === "es" ? "Archivo adjunto" : "Attachment"}
+                            </p>
+                          )
                         }
                         if (isToolUIPart(part)) {
                           const toolName = part.type.startsWith("tool-")
@@ -1397,33 +1537,75 @@ export default function HomePage() {
                 ))
               )}
             </div>
-            <div className="mt-3 flex gap-2">
+            <input
+              ref={chatFileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const list = e.target.files
+                if (!list?.length) return
+                setPendingChatFiles((prev) => [...prev, ...Array.from(list)])
+              }}
+            />
+            {pendingChatFiles.length > 0 ? (
+              <div className="flex flex-wrap gap-2 text-xs text-white/70">
+                {pendingChatFiles.map((f, i) => (
+                  <span
+                    key={`${f.name}-${i}`}
+                    className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.06] px-2 py-1"
+                  >
+                    {f.name}
+                    <button
+                      type="button"
+                      className="text-white/50 hover:text-white"
+                      onClick={() =>
+                        setPendingChatFiles((prev) => prev.filter((_, j) => j !== i))
+                      }
+                      aria-label={language === "es" ? "Quitar" : "Remove"}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                onClick={() => chatFileInputRef.current?.click()}
+                disabled={status === "streaming"}
+                className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/[0.08] px-3 py-2 text-white/90 transition hover:bg-white/15 disabled:opacity-50"
+                title={t.chatAttachImage}
+              >
+                <ImagePlus className="h-4 w-4" />
+              </button>
               <input
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && chatInput.trim() && status !== "streaming") {
-                    sendMessage({ text: chatInput })
-                    setChatInput("")
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    submitAiChat()
                   }
                 }}
-                className={`${inputGlass} min-w-0 flex-1`}
+                className={`${inputGlass} min-h-11 min-w-0 flex-1 text-base sm:text-sm`}
                 placeholder={t.chatPlaceholder}
               />
               <button
                 type="button"
-                onClick={() => {
-                  if (!chatInput.trim() || status === "streaming") return
-                  sendMessage({ text: chatInput })
-                  setChatInput("")
-                }}
-                disabled={!chatInput.trim() || status === "streaming"}
-                className="inline-flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-2 font-medium shadow-lg disabled:opacity-50"
+                onClick={() => submitAiChat()}
+                disabled={
+                  status === "streaming" || (!chatInput.trim() && pendingChatFiles.length === 0)
+                }
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-2 font-medium shadow-lg disabled:opacity-50"
               >
                 {status === "streaming" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </button>
             </div>
-            {chatError ? <p className="mt-2 text-sm text-red-300">{chatError}</p> : null}
+            {chatError ? <p className="text-sm text-red-300">{chatError}</p> : null}
+            </div>
           </SheetContent>
         </Sheet>
       </div>

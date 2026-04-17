@@ -40,9 +40,9 @@ export function CalendarWeekGrid({
   const cols = viewDates.length === 1 ? "grid-cols-1" : "min-w-[640px] grid-cols-7"
 
   return (
-    <div className="flex min-h-[720px] w-full overflow-x-auto rounded-2xl border border-white/15 bg-white/[0.07] backdrop-blur-xl">
+    <div className="flex min-h-[min(720px,85dvh)] w-full touch-pan-x overflow-x-auto rounded-2xl border border-white/15 bg-white/[0.07] [-webkit-overflow-scrolling:touch] backdrop-blur-xl">
       <div
-        className="sticky left-0 z-20 w-14 shrink-0 border-r border-white/10 bg-slate-950/40 py-2 text-right text-[11px] text-white/45"
+        className="sticky left-0 z-20 w-16 shrink-0 border-r border-white/10 bg-slate-950/40 py-2 text-right text-[11px] text-white/45 md:w-14"
         style={{ paddingTop: 40 }}
       >
         {hourRows.map((h) => (

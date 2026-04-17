@@ -8,7 +8,8 @@ services:
     environment:
       POSTGRES_DB: calendar_app
       POSTGRES_USER: calendar_user
-      POSTGRES_PASSWORD: calendar_password
+      # Definir en .env local o en el servidor; valor por defecto solo para desarrollo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-calendar_password}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U calendar_user -d calendar_app"]
       interval: 5s

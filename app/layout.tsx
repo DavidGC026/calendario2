@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthSessionProvider } from "@/components/session-provider"
@@ -7,8 +7,15 @@ import { AuthSessionProvider } from "@/components/session-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Lovy-tech | Smart Glasses OS",
-  description: "Advanced e-OS system for smart glasses with real-time performance tracking",
+  title: "Calendario inteligente",
+  description: "Calendario con eventos persistentes y asistente IA",
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#020617",
 }
 
 export default function RootLayout({
