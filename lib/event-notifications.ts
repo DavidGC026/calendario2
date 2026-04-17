@@ -1,5 +1,3 @@
-import { after } from "next/server"
-
 import {
   isEmailConfigured,
   sendEventCreatedEmail,
@@ -9,8 +7,22 @@ import {
 import type { EventDTO } from "@/lib/events"
 import { prisma } from "@/lib/prisma"
 
+let loggedMissingResendKey = false
+
+function skipEmailWithLog(context: string): boolean {
+  if (isEmailConfigured()) return false
+  if (!loggedMissingResendKey) {
+    loggedMissingResendKey = true
+    console.warn(
+      `[email] ${context}: RESEND_API_KEY no está definida; configura la variable en el servidor (p. ej. panel del hosting o .env).`,
+    )
+  }
+  return true
+}
+
+/** Ejecutar con await en route handlers / tools para que el envío termine en la misma petición (serverless no corta el trabajo). */
 export async function runNotifyEventCreated(ownerId: string, dto: EventDTO): Promise<void> {
-  if (!isEmailConfigured()) return
+  if (skipEmailWithLog("runNotifyEventCreated")) return
   try {
     const owner = await prisma.user.findUnique({
       where: { id: ownerId },
@@ -36,7 +48,7 @@ export async function runNotifyEventCreated(ownerId: string, dto: EventDTO): Pro
 }
 
 export async function runNotifyEventUpdated(ownerId: string, dto: EventDTO): Promise<void> {
-  if (!isEmailConfigured()) return
+  if (skipEmailWithLog("runNotifyEventUpdated")) return
   try {
     const owner = await prisma.user.findUnique({
       where: { id: ownerId },
@@ -53,7 +65,7 @@ export async function runNotifyEventUpdated(ownerId: string, dto: EventDTO): Pro
 }
 
 export async function runNotifyEventDeleted(ownerId: string, dto: EventDTO): Promise<void> {
-  if (!isEmailConfigured()) return
+  if (skipEmailWithLog("runNotifyEventDeleted")) return
   try {
     const owner = await prisma.user.findUnique({
       where: { id: ownerId },
@@ -72,23 +84,4 @@ export async function runNotifyEventDeleted(ownerId: string, dto: EventDTO): Pro
   } catch (e) {
     console.error("[notifyEventDeleted]", e)
   }
-}
-
-/** Programa el envío tras la respuesta HTTP (REST); en serverless evita cancelar el trabajo. */
-export function notifyEventCreatedAsync(ownerId: string, dto: EventDTO): void {
-  after(() => {
-    void runNotifyEventCreated(ownerId, dto)
-  })
-}
-
-export function notifyEventUpdatedAsync(ownerId: string, dto: EventDTO): void {
-  after(() => {
-    void runNotifyEventUpdated(ownerId, dto)
-  })
-}
-
-export function notifyEventDeletedAsync(ownerId: string, dto: EventDTO): void {
-  after(() => {
-    void runNotifyEventDeleted(ownerId, dto)
-  })
 }

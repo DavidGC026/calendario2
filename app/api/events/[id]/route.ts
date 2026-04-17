@@ -1,7 +1,9 @@
 import { z } from "zod"
 
 import { getCurrentUserId } from "@/lib/auth"
-import { notifyEventDeletedAsync, notifyEventUpdatedAsync } from "@/lib/event-notifications"
+
+export const maxDuration = 60
+import { runNotifyEventDeleted, runNotifyEventUpdated } from "@/lib/event-notifications"
 import { deleteEventForUser, updateEventForUser } from "@/lib/events"
 
 const updateEventSchema = z
@@ -62,7 +64,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
     )
   }
 
-  notifyEventUpdatedAsync(userId, result.event)
+  await runNotifyEventUpdated(userId, result.event)
 
   return Response.json(result)
 }
@@ -79,7 +81,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
     return Response.json({ error: "Evento no encontrado" }, { status: 404 })
   }
 
-  notifyEventDeletedAsync(userId, deletedDto)
+  await runNotifyEventDeleted(userId, deletedDto)
 
   return Response.json({ success: true })
 }

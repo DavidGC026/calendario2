@@ -1,6 +1,8 @@
 import { z } from "zod"
 
 import { getCurrentUserId } from "@/lib/auth"
+
+export const maxDuration = 60
 import { sendFriendAcceptedEmail, sendFriendRequestEmail } from "@/lib/email"
 import { sendFriendRequest } from "@/lib/friends"
 import { prisma } from "@/lib/prisma"
@@ -46,7 +48,7 @@ export async function POST(req: Request) {
       }),
     ])
     if (accepter?.email && originalSender?.email) {
-      void sendFriendAcceptedEmail({
+      await sendFriendAcceptedEmail({
         to: originalSender.email,
         accepterName: accepter.name,
         accepterEmail: accepter.email,
@@ -64,7 +66,7 @@ export async function POST(req: Request) {
       }),
     ])
     if (from?.email && to?.email) {
-      void sendFriendRequestEmail({
+      await sendFriendRequestEmail({
         to: to.email,
         fromName: from.name,
         fromEmail: from.email,

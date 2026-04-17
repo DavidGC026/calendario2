@@ -1,7 +1,10 @@
 import { z } from "zod"
 
 import { getCurrentUserId } from "@/lib/auth"
-import { notifyEventCreatedAsync } from "@/lib/event-notifications"
+
+/** Tiempo suficiente para Resend + varios destinatarios en serverless. */
+export const maxDuration = 60
+import { runNotifyEventCreated } from "@/lib/event-notifications"
 import { createEventForUser, listEventsForUser } from "@/lib/events"
 
 const createEventSchema = z.object({
@@ -59,7 +62,7 @@ export async function POST(req: Request) {
     )
   }
 
-  notifyEventCreatedAsync(userId, result.event)
+  await runNotifyEventCreated(userId, result.event)
 
   return Response.json(result, { status: 201 })
 }
