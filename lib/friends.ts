@@ -177,7 +177,7 @@ export async function acceptFriendRequest(userId: string, requestId: string) {
     where: { id: requestId },
     data: { status: "ACCEPTED" },
   })
-  return { ok: true as const }
+  return { ok: true as const, fromUserId: req.fromUserId }
 }
 
 export async function rejectFriendRequest(userId: string, requestId: string) {

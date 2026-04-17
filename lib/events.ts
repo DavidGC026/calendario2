@@ -231,6 +231,11 @@ export async function updateEventForUser(
       ? [...new Set(input.participantUserIds)].filter(Boolean)
       : existing.participantUserIds
 
+  const prevDate = formatISODateLocal(existing.startAt)
+  const prevStartTime = formatTime(existing.startAt)
+  const prevEndTime = formatTime(existing.endAt)
+  const scheduleChanged = nextDate !== prevDate || st !== prevStartTime || et !== prevEndTime
+
   const event = await prisma.event.update({
     where: { id: eventId },
     data: {
@@ -243,6 +248,7 @@ export async function updateEventForUser(
       attendees: input.attendees ?? existing.attendees,
       participantUserIds: nextParticipants,
       organizer: input.organizer ?? existing.organizer,
+      ...(scheduleChanged ? { reminderEmailSentAt: null } : {}),
     },
   })
 

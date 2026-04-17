@@ -1,7 +1,9 @@
 import { z } from "zod"
 
 import { getCurrentUserId } from "@/lib/auth"
+import { sendFriendAcceptedEmail } from "@/lib/email"
 import { acceptFriendRequest, rejectFriendRequest } from "@/lib/friends"
+import { prisma } from "@/lib/prisma"
 
 const bodySchema = z.object({
   requestId: z.string().min(1),
@@ -27,6 +29,26 @@ export async function POST(req: Request) {
 
   if (!result.ok) {
     return Response.json({ error: "Solicitud no encontrada" }, { status: 404 })
+  }
+
+  if (accept && "fromUserId" in result) {
+    const [accepter, requester] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: String(result.fromUserId) },
+        select: { email: true },
+      }),
+    ])
+    if (accepter?.email && requester?.email) {
+      void sendFriendAcceptedEmail({
+        to: requester.email,
+        accepterName: accepter.name,
+        accepterEmail: accepter.email,
+      })
+    }
   }
 
   return Response.json({ success: true })

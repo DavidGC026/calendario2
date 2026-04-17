@@ -65,6 +65,8 @@ model Event {
   /** Usuarios amigos incluidos en el evento (solo IDs de amistad aceptada). */
   participantUserIds   String[] @default([])
   organizer            String?
+  /** Si ya se envió el recordatorio por correo el día del evento (cron). */
+  reminderEmailSentAt  DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

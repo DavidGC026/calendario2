@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { getCurrentUserId } from "@/lib/auth"
+import { notifyEventUpdatedAsync } from "@/lib/event-notifications"
 import { deleteEventForUser, updateEventForUser } from "@/lib/events"
 
 const updateEventSchema = z
@@ -59,6 +60,8 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       { status: 409 },
     )
   }
+
+  notifyEventUpdatedAsync(userId, result.event)
 
   return Response.json(result)
 }

@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { getCurrentUserId } from "@/lib/auth"
+import { notifyEventCreatedAsync } from "@/lib/event-notifications"
 import { createEventForUser, listEventsForUser } from "@/lib/events"
 
 const createEventSchema = z.object({
@@ -56,6 +57,8 @@ export async function POST(req: Request) {
       { status: 409 },
     )
   }
+
+  notifyEventCreatedAsync(userId, result.event)
 
   return Response.json(result, { status: 201 })
 }

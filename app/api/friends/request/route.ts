@@ -1,7 +1,9 @@
 import { z } from "zod"
 
 import { getCurrentUserId } from "@/lib/auth"
+import { sendFriendAcceptedEmail, sendFriendRequestEmail } from "@/lib/email"
 import { sendFriendRequest } from "@/lib/friends"
+import { prisma } from "@/lib/prisma"
 
 const bodySchema = z.object({
   targetUserId: z.string().min(1),
@@ -30,6 +32,44 @@ export async function POST(req: Request) {
     }
     const m = map[result.error] ?? { status: 400, message: "No se pudo enviar" }
     return Response.json({ error: m.message, code: result.error }, { status: m.status })
+  }
+
+  if (result.autoAccepted) {
+    const [accepter, originalSender] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: parsed.data.targetUserId },
+        select: { email: true, name: true },
+      }),
+    ])
+    if (accepter?.email && originalSender?.email) {
+      void sendFriendAcceptedEmail({
+        to: originalSender.email,
+        accepterName: accepter.name,
+        accepterEmail: accepter.email,
+      })
+    }
+  } else {
+    const [from, to] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: parsed.data.targetUserId },
+        select: { email: true },
+      }),
+    ])
+    if (from?.email && to?.email) {
+      void sendFriendRequestEmail({
+        to: to.email,
+        fromName: from.name,
+        fromEmail: from.email,
+      })
+    }
   }
 
   return Response.json({
