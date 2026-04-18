@@ -1146,14 +1146,16 @@ export default function HomePage() {
                   </option>
                 </select>
               </div>
-              <Link
-                href="/notas"
-                className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2 transition hover:bg-white/[0.08]`}
-                aria-label={t.notesPage}
-                title={t.notesPage}
-              >
-                <FileText className="h-4 w-4" />
-              </Link>
+              {isAdmin ? (
+                <Link
+                  href="/notas"
+                  className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2 transition hover:bg-white/[0.08]`}
+                  aria-label={t.notesPage}
+                  title={t.notesPage}
+                >
+                  <FileText className="h-4 w-4" />
+                </Link>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setSettingsOpen(true)}

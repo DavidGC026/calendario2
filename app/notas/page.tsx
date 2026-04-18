@@ -1,46 +1,33 @@
-import { readFile } from "fs/promises"
-import path from "path"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowLeft, FileText } from "lucide-react"
 
-import { MarkdownContent } from "@/components/markdown-content"
-import { getCurrentSession } from "@/lib/auth"
-import { stripYamlFrontmatter } from "@/lib/strip-frontmatter"
+import { AdminNotesManager } from "@/components/admin-notes-manager"
+import { getCurrentUser } from "@/lib/auth"
+import { listAdminNotes } from "@/lib/admin-notes"
 
 export const dynamic = "force-dynamic"
 
 export const metadata = {
-  title: "Notas | Calendario inteligente",
-  description: "Notas en Markdown (content/notas.md)",
+  title: "Notas (admin) | Calendario inteligente",
+  description: "Notas en Markdown — solo administradores",
 }
 
-const NOTAS_PATH = path.join(process.cwd(), "content", "notas.md")
-
-const FALLBACK_MD = `# Notas
-
-No se encontró \`content/notas.md\`. Crea ese archivo en la raíz del proyecto (carpeta \`content/\`) y vuelve a cargar.
-`
-
 export default async function NotasPage() {
-  const session = await getCurrentSession()
-  if (!session) {
+  const user = await getCurrentUser()
+  if (!user) {
     redirect("/login?callbackUrl=/notas")
   }
-
-  let raw: string
-  try {
-    raw = await readFile(NOTAS_PATH, "utf-8")
-  } catch {
-    raw = FALLBACK_MD
+  if (user.role !== "ADMIN") {
+    redirect("/")
   }
 
-  const markdown = stripYamlFrontmatter(raw)
+  const notes = await listAdminNotes()
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-violet-950/90 via-slate-950 to-blue-950/90" />
-      <div className="relative mx-auto max-w-3xl px-safe py-8 md:py-12">
+      <div className="relative mx-auto max-w-3xl px-safe py-8 md:max-w-4xl md:py-12">
         <div className="mb-8 flex flex-col gap-4 border-b border-white/10 pb-6">
           <Link
             href="/"
@@ -56,15 +43,13 @@ export default async function NotasPage() {
             <div>
               <h1 className="text-2xl font-semibold tracking-tight text-white">Notas</h1>
               <p className="mt-1 text-sm text-white/55">
-                Contenido Markdown desde <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs text-sky-200">content/notas.md</code>
+                Solo administradores. Crea y edita notas en Markdown; se guardan en la base de datos.
               </p>
             </div>
           </div>
         </div>
 
-        <article className="rounded-2xl border border-white/10 bg-slate-950/50 p-5 shadow-xl backdrop-blur-md md:p-8">
-          <MarkdownContent markdown={markdown} />
-        </article>
+        <AdminNotesManager initialNotes={notes} />
       </div>
     </main>
   )

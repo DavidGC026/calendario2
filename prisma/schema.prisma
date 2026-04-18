@@ -34,6 +34,20 @@ model User {
   events       Event[]
   friendRequestsSent     FriendRequest[] @relation("FriendRequestFrom")
   friendRequestsReceived FriendRequest[] @relation("FriendRequestTo")
+  adminNotes   AdminNote[]
+}
+
+/** Notas Markdown gestionadas por administradores (sección /notas). */
+model AdminNote {
+  id        String   @id @default(cuid())
+  title     String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([updatedAt])
 }
 
 model FriendRequest {
