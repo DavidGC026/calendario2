@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import {
   DefaultChatTransport,
   isFileUIPart,
@@ -14,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  FileText,
   ImagePlus,
   Loader2,
   LogOut,
@@ -115,6 +117,7 @@ const copy = {
     subtitle: "Eventos persistentes en PostgreSQL con acciones de IA.",
     logout: "Cerrar sesión",
     settings: "Configuración",
+    notesPage: "Notas (Markdown)",
     language: "Idioma",
     createEvent: "Crear evento",
     updateEvent: "Actualizar evento",
@@ -228,6 +231,7 @@ const copy = {
     subtitle: "Persistent events in PostgreSQL with AI actions.",
     logout: "Log out",
     settings: "Settings",
+    notesPage: "Notes (Markdown)",
     language: "Language",
     createEvent: "Create event",
     updateEvent: "Update event",
@@ -1142,6 +1146,14 @@ export default function HomePage() {
                   </option>
                 </select>
               </div>
+              <Link
+                href="/notas"
+                className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2 transition hover:bg-white/[0.08]`}
+                aria-label={t.notesPage}
+                title={t.notesPage}
+              >
+                <FileText className="h-4 w-4" />
+              </Link>
               <button
                 type="button"
                 onClick={() => setSettingsOpen(true)}

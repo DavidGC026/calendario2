@@ -24,6 +24,8 @@ Esta guía documenta lo que se hizo para que los correos de confirmación, actua
 
 *(Esta sección está al **principio** del documento para encontrarla sin bajar hasta el final. En VS Code/Cursor: outline lateral o `Ctrl+F` / `Cmd+F` → «Notas».)*
 
+**En la aplicación web:** la ruta **`/notas`** muestra el Markdown del archivo **`content/notas.md`** (GFM: tablas, listas, enlaces). Tras editar ese archivo en el servidor, reconstruye la imagen Docker para que el cambio se vea en producción.
+
 Espacio libre para anotar lo que quieras recordar en el siguiente mantenimiento (IPs, nombres de host, incidencias, números de ticket, etc.):
 
 - …
