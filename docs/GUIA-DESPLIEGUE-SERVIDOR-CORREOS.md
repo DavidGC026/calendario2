@@ -18,6 +18,35 @@ Esta guía documenta lo que se hizo para que los correos de confirmación, actua
 
 > En visores que soportan frontmatter (p. ej. algunas extensiones de VS Code, Obsidian o herramientas estáticas), los metadatos del bloque `---` arriba suelen aparecer como propiedades del documento. En GitHub el frontmatter no se renderiza como tabla, pero **sigue siendo Markdown válido** y la tabla de arriba muestra las fechas de forma clara.
 
+<a id="notas-apuntes"></a>
+
+## Notas y apuntes personales
+
+*(Esta sección está al **principio** del documento para encontrarla sin bajar hasta el final. En VS Code/Cursor: outline lateral o `Ctrl+F` / `Cmd+F` → «Notas».)*
+
+Espacio libre para anotar lo que quieras recordar en el siguiente mantenimiento (IPs, nombres de host, incidencias, números de ticket, etc.):
+
+- …
+- …
+
+*(Cuando actualices el contenido sustancial de la guía, sube también `ultima_revision` en el frontmatter y, si aplica, la tabla de fechas bajo el título.)*
+
+---
+
+## Índice
+
+- [Notas y apuntes personales](#notas-apuntes)
+- [Qué pasó (causa habitual)](#qué-pasó-causa-habitual)
+- [Requisitos en el servidor](#requisitos-en-el-servidor)
+- [Procedimiento estándar: actualizar código y volver a desplegar](#procedimiento-estándar-actualizar-código-y-volver-a-desplegar)
+- [Verificación rápida](#verificación-rápida)
+- [Si «no llegan correos» pero Resend responde bien](#si-no-llegan-correos-pero-resend-responde-bien)
+- [Recordatorios del día del evento](#recordatorios-del-día-del-evento)
+- [Recomendaciones adicionales](#recomendaciones-adicionales)
+- [Resumen en una línea](#resumen-en-una-línea)
+
+---
+
 ## Qué pasó (causa habitual)
 
 1. **El código en el servidor no era el mismo que en GitHub.** El repositorio en el servidor (`/opt/calendar-web/repo`) estaba varios commits detrás de `origin/main`. Los cambios que hacían que los correos se enviaran de forma fiable (`await` a las notificaciones, `maxDuration` en rutas API, etc.) **no estaban en la imagen Docker** que corría en producción.
@@ -150,15 +179,6 @@ Sin eso, los correos de **confirmación / actualización / borrado** pueden func
 - **Secretos:** respaldo cifrado o gestor de secretos para `/opt/calendar-web/.env`; nunca lo subas a Git.
 - **Base de datos:** antes de `migrate deploy` en producción, backup de PostgreSQL si el cambio es grande.
 - **Salud del contenedor:** `docker compose ps` y alertas si el contenedor reinicia en bucle tras un deploy fallido.
-
-## Notas
-
-Espacio libre para anotar lo que quieras recordar en el siguiente mantenimiento (IPs, nombres de host, incidencias, números de ticket, etc.):
-
-- …
-- …
-
-*(Cuando actualices el contenido sustancial de la guía, sube también `ultima_revision` en el frontmatter y, si aplica, la tabla de fechas bajo el título.)*
 
 ## Resumen en una línea
 
