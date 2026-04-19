@@ -178,6 +178,23 @@ ${isEnglish
    - Si dice que no, crea el evento con el lane que mejor puedas inferir (o pregunta explícitamente por el lane).
 5. NUNCA te inventes contactos; solo se guardan llamando a la tool createContact.`}
 
+${isEnglish ? "EMAIL REMINDERS:" : "RECORDATORIOS POR CORREO:"}
+${isEnglish
+  ? `Every event already gets an automatic email at 8:00 AM the day it happens, but the user can also add an extra reminder "X minutes before" the start.
+Allowed values for reminderMinutesBefore: null (no extra reminder), 5, 15, 30, 60, 120, 1440 (= 1 day before).
+Behaviour for createEvent / updateEvent:
+1. If the user explicitly says when to remind ("avísame 30 min antes", "recuérdamelo 1 día antes", "sin recordatorio"), set reminderMinutesBefore accordingly and DO NOT ask again.
+2. Otherwise, after creating the event, ask ONE short question: "¿Quieres un recordatorio extra antes del evento? Por ejemplo 15 min, 30 min, 1 hora o 1 día antes — o ninguno." Then call updateEvent with the chosen reminderMinutesBefore.
+3. If the user just answers a duration ("media hora", "una hora antes"), translate to minutes and pick the closest allowed value.
+4. For an event already in the past or starting in less than 5 minutes, do not ask and leave reminderMinutesBefore as null.`
+  : `Todos los eventos ya reciben un correo automático a las 8:00 AM del día que ocurren, pero el usuario también puede añadir un aviso extra «X minutos antes» del inicio.
+Valores permitidos para reminderMinutesBefore: null (sin aviso extra), 5, 15, 30, 60, 120, 1440 (= 1 día antes).
+Comportamiento al usar createEvent o updateEvent:
+1. Si el usuario indica explícitamente cuándo avisar («avísame 30 min antes», «recuérdamelo 1 día antes», «sin recordatorio»), pon reminderMinutesBefore en esa cifra y NO vuelvas a preguntar.
+2. Si no lo indica, después de crear el evento pregunta UNA sola línea corta: «¿Quieres un recordatorio extra antes del evento? Por ejemplo 15 min, 30 min, 1 hora o 1 día antes — o ninguno.» Luego llama a updateEvent con el reminderMinutesBefore elegido.
+3. Si el usuario responde solo con una duración («media hora», «una hora antes»), conviértela a minutos y usa el valor permitido más cercano.
+4. Si el evento ya pasó o empieza en menos de 5 minutos, no preguntes y deja reminderMinutesBefore en null.`}
+
 ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre en español y de forma concisa."}${multimodalHint}${dateContext}${eventsContext}${friendsContext}${contactsContext}`,
     messages: await convertToModelMessages(messages),
     tools: {
@@ -325,6 +342,15 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
               "Nombres de amigos a invitar (p. ej. «José David»); se resuelven contra tu lista de amigos. Puedes usar esto en lugar de participantUserIds.",
             ),
           organizer: z.string().optional(),
+          reminderMinutesBefore: z
+            .union([z.literal(5), z.literal(15), z.literal(30), z.literal(60), z.literal(120), z.literal(1440)])
+            .nullable()
+            .optional()
+            .describe(
+              isEnglish
+                ? "Extra email reminder in minutes before the start. Allowed: null (none), 5, 15, 30, 60, 120, 1440. Only set if the user explicitly asked for it."
+                : "Aviso por correo X minutos antes del inicio. Valores: null (ninguno), 5, 15, 30, 60, 120, 1440. Pónlo solo si el usuario lo pidió explícitamente.",
+            ),
           allowConflict: z.boolean().optional(),
         }),
         execute: async ({ allowConflict, color, ...rest }) => {
@@ -372,6 +398,15 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
             .optional()
             .describe("Añade o resuelve amigos por nombre; se fusionan con la lista actual si no pasas participantUserIds"),
           organizer: z.string().optional(),
+          reminderMinutesBefore: z
+            .union([z.literal(5), z.literal(15), z.literal(30), z.literal(60), z.literal(120), z.literal(1440)])
+            .nullable()
+            .optional()
+            .describe(
+              isEnglish
+                ? "Extra email reminder in minutes before the start. Allowed: null (none), 5, 15, 30, 60, 120, 1440."
+                : "Aviso por correo X minutos antes del inicio. Valores: null (ninguno), 5, 15, 30, 60, 120, 1440.",
+            ),
           allowConflict: z.boolean().optional(),
         }),
         execute: async ({ eventId, allowConflict, color, ...rest }) => {
