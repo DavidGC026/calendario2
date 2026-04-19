@@ -16,6 +16,16 @@ import {
 } from "@/lib/calendar-lanes"
 import { formatISODateLocal } from "@/lib/calendar-view-utils"
 import {
+  CONTACT_CATEGORIES,
+  categoryLabel,
+  categoryToLane,
+  createContact,
+  isContactCategory,
+  listContacts,
+  searchContacts,
+  type ContactCategory,
+} from "@/lib/contacts"
+import {
   EventDTO,
   createEventForUser,
   deleteEventForUser,
@@ -104,6 +114,15 @@ export async function POST(req: Request) {
       ? `\n\nAmigos en la app (para invitar a alguien DEBES poner su userId en participantUserIds en createEvent o updateEvent; poner solo el nombre en "attendees" o en el título NO lo añade como participante ni envía correos):\n${friends.map((f) => `- userId=${f.id} — ${f.name ?? "(sin nombre)"} <${f.email}>`).join("\n")}`
       : `\n\nEl usuario aún no tiene amigos en la app; no puedes usar participantUserIds.`
 
+  const contacts = await listContacts(userId)
+  const contactsContext = isEnglish
+    ? contacts.length > 0
+      ? `\n\nKnown contacts (use them to infer the calendar lane when an event mentions a person; categories: FAMILY → bg-purple-500, WORK → bg-green-500, FRIEND → bg-orange-500, OTHER → bg-blue-500):\n${contacts.map((c) => `- ${c.name} [${c.category}${c.relation ? `, ${c.relation}` : ""}]`).join("\n")}`
+      : `\n\nThe user has no saved contacts yet.`
+    : contacts.length > 0
+      ? `\n\nContactos conocidos del usuario (úsalos para inferir el calendario cuando un evento mencione a una persona; categorías: FAMILY → bg-purple-500, WORK → bg-green-500, FRIEND → bg-orange-500, OTHER → bg-blue-500):\n${contacts.map((c) => `- ${c.name} [${c.category}${c.relation ? `, ${c.relation}` : ""}]`).join("\n")}`
+      : `\n\nEl usuario aún no tiene contactos guardados.`
+
   const dateContext = isEnglish
     ? `\n\nToday's date is ${todayIso} (${todayReadable}). For tool calls, always use eventDate as YYYY-MM-DD. If the user gives a day and month without a year, choose the year that matches their intent relative to today (often the current year if that calendar date has not passed yet, or the upcoming occurrence they mean).`
     : `\n\nLa fecha de hoy es ${todayIso} (${todayReadable}). Para las tools usa siempre eventDate en formato YYYY-MM-DD. Si el usuario indica solo día y mes sin año, elige el año coherente con lo que pide respecto a hoy (por ejemplo el año actual si aún no pasó esa fecha este año, o el "próximo" 27 de abril que corresponda).`
@@ -131,7 +150,27 @@ ${isEnglish ? "Use event id from the list above for updateEvent/deleteEvent." : 
 ${isEnglish ? "When changing participants, participantUserIds must include every friend who should stay on the event (merge existing ids from the event line with new ones)." : "Si cambias participantes, participantUserIds debe incluir todos los amigos que deben quedar en el evento (mezcla los participantUserIds que ya aparecen en la línea del evento con los nuevos)."}
 ${isEnglish ? "You may use participantNameHints with a friend's name (e.g. \"Jose David\") instead of IDs; the server resolves names to user ids." : "Puedes usar participantNameHints con el nombre del amigo (p. ej. «José David») además o en lugar de participantUserIds; el servidor resuelve el nombre contra la lista de amigos."}
 ${isEnglish ? "Before inviting someone by name only, call searchFriends with that name: 0 matches → say no friend matched and ask them to paste the exact userId from the friends list above, or fix friendship; 2+ matches → list options and ask which one or for userId; 1 match → use that userId." : "Antes de invitar solo por nombre, llama a searchFriends con ese texto: 0 coincidencias → di que no hay amigo con ese nombre y pide el userId exacto de la lista de arriba o que compruebe la amistad; 2+ → enumera opciones (userId, nombre, email) y pide que aclare o el userId; 1 → usa ese userId en el evento."}
-${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre en español y de forma concisa."}${multimodalHint}${dateContext}${eventsContext}${friendsContext}`,
+
+${isEnglish ? "PERSON-AWARE LANE INFERENCE (Contacts feature):" : "INFERENCIA DE CALENDARIO POR PERSONA (Contactos):"}
+${isEnglish
+  ? `When an event mentions a person by name (e.g. "birthday of Benjamin", "lunch with Pedro", "meeting with Ana"), follow this exact flow BEFORE calling createEvent/updateEvent:
+1. Call the tool searchContact({ name: "<person>" }).
+2. If a contact is found → use its categoryLane as the event "color" and proceed to createEvent. You can also briefly mention "lo guardo en <Family/Work/...> porque <Name> está en tus contactos como <CATEGORY>".
+3. If NO contact is found and you cannot infer the lane confidently from the title alone → ask the user one short question: "Veo que mencionas a <Name>. ¿Quieres que lo guarde como contacto regular? Si sí, ¿en qué categoría: Familia, Amigo, Trabajo u Otro?". Wait for the reply.
+4. Once the user answers:
+   - If they say add it (e.g. "sí, familiar", "amigo", "trabajo"), call createContact({ name, category, relation? }) BEFORE createEvent. Use the returned categoryLane as the event color.
+   - If they say no, just create the event with the lane you can best infer (or ask for the lane explicitly).
+5. NEVER invent contacts; only persist via the createContact tool.`
+  : `Cuando un evento mencione a una persona por nombre (p. ej. «cumpleaños de Benjamin», «comida con Pedro», «reunión con Ana»), sigue EXACTAMENTE este flujo ANTES de llamar a createEvent o updateEvent:
+1. Llama a la tool searchContact({ name: "<persona>" }).
+2. Si encuentra un contacto → usa su categoryLane como "color" del evento y continúa con createEvent. Puedes mencionar brevemente «lo guardo en <Familia/Trabajo/...> porque <Nombre> está en tus contactos como <CATEGORÍA>».
+3. Si NO encuentra contacto y NO puedes inferir el lane con seguridad solo por el título → pregunta una sola línea corta al usuario: «Veo que mencionas a <Nombre>. ¿Quieres que lo guarde como contacto regular? Si sí, ¿en qué categoría: Familia, Amigo, Trabajo u Otro?». Espera la respuesta.
+4. Cuando el usuario responda:
+   - Si dice que sí (p. ej. «sí, familiar», «amigo», «trabajo»), llama a createContact({ name, category, relation? }) ANTES que createEvent. Usa el categoryLane devuelto como color del evento.
+   - Si dice que no, crea el evento con el lane que mejor puedas inferir (o pregunta explícitamente por el lane).
+5. NUNCA te inventes contactos; solo se guardan llamando a la tool createContact.`}
+
+${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre en español y de forma concisa."}${multimodalHint}${dateContext}${eventsContext}${friendsContext}${contactsContext}`,
     messages: await convertToModelMessages(messages),
     tools: {
       getEventsForDate: tool({
@@ -168,6 +207,86 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
                 name: m.name,
                 email: m.email,
               })),
+            }
+          } catch (e) {
+            return toolErr(e)
+          }
+        },
+      }),
+      searchContact: tool({
+        description: isEnglish
+          ? "Look up a saved contact by name to infer the calendar lane (Family/Friend/Work/Other). Call this BEFORE createEvent whenever the user mentions a person by name."
+          : "Buscar un contacto guardado por nombre para inferir el calendario (Familia/Amigo/Trabajo/Otro). Llama a esta tool ANTES de createEvent siempre que el usuario mencione a una persona por nombre.",
+        inputSchema: z.object({
+          name: z
+            .string()
+            .min(2)
+            .describe(isEnglish ? "Person name to search (e.g. \"Benjamin\")" : "Nombre de la persona a buscar (p. ej. «Benjamin»)"),
+        }),
+        execute: async ({ name }) => {
+          try {
+            const matches = await searchContacts(userId, name)
+            return {
+              matchCount: matches.length,
+              matches: matches.map((c) => ({
+                id: c.id,
+                name: c.name,
+                category: c.category,
+                categoryLabel: categoryLabel(c.category, isEnglish ? "en" : "es"),
+                categoryLane: categoryToLane(c.category),
+                relation: c.relation,
+              })),
+            }
+          } catch (e) {
+            return toolErr(e)
+          }
+        },
+      }),
+      createContact: tool({
+        description: isEnglish
+          ? "Save a new contact for this user with a category. Use it when the user agrees to add a mentioned person as a regular contact. Returns the contact and its categoryLane (use that as the event color)."
+          : "Guardar un nuevo contacto del usuario con una categoría. Úsala cuando el usuario acepte añadir a una persona mencionada como contacto regular. Devuelve el contacto y su categoryLane (úsala como color del evento).",
+        inputSchema: z.object({
+          name: z.string().min(1).describe(isEnglish ? "Contact name" : "Nombre del contacto"),
+          category: z
+            .enum(CONTACT_CATEGORIES as unknown as [string, ...string[]])
+            .describe(
+              isEnglish
+                ? "FAMILY (Family/purple), FRIEND (Friend/orange-Personal), WORK (Work/green), OTHER (default/blue)"
+                : "FAMILY (Familia/morado), FRIEND (Amigo/naranja-Personal), WORK (Trabajo/verde), OTHER (Otro/azul)",
+            ),
+          relation: z
+            .string()
+            .optional()
+            .describe(
+              isEnglish
+                ? "Optional free-text relation (e.g. \"brother\", \"colleague\", \"college friend\")"
+                : "Relación opcional en texto libre (p. ej. «hermano», «compañero», «amiga de la uni»)",
+            ),
+        }),
+        execute: async ({ name, category, relation }) => {
+          try {
+            if (!isContactCategory(category)) {
+              return { success: false, error: "Categoría inválida" }
+            }
+            const result = await createContact(userId, {
+              name,
+              category: category as ContactCategory,
+              relation: relation ?? null,
+            })
+            if (!result.ok) {
+              return { success: false, error: result.error }
+            }
+            return {
+              success: true,
+              contact: {
+                id: result.contact.id,
+                name: result.contact.name,
+                category: result.contact.category,
+                categoryLabel: categoryLabel(result.contact.category, isEnglish ? "en" : "es"),
+                categoryLane: categoryToLane(result.contact.category),
+                relation: result.contact.relation,
+              },
             }
           } catch (e) {
             return toolErr(e)

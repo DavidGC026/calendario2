@@ -23,21 +23,34 @@ enum FriendRequestStatus {
   REJECTED
 }
 
-model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String?
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  events       Event[]
-  friendRequestsSent     FriendRequest[] @relation("FriendRequestFrom")
-  friendRequestsReceived FriendRequest[] @relation("FriendRequestTo")
-  adminNotes   AdminNote[]
+/**
+ * Categorías para los contactos rápidos guardados por la IA o por el usuario.
+ */
+enum ContactCategory {
+  FAMILY
+  FRIEND
+  WORK
+  OTHER
 }
 
-/** Notas Markdown gestionadas por administradores (sección /notas). */
+model User {
+  id                     String          @id @default(cuid())
+  email                  String          @unique
+  passwordHash           String
+  name                   String?
+  role                   Role            @default(USER)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  events                 Event[]
+  friendRequestsSent     FriendRequest[] @relation("FriendRequestFrom")
+  friendRequestsReceived FriendRequest[] @relation("FriendRequestTo")
+  adminNotes             AdminNote[]
+  contacts               Contact[]
+}
+
+/**
+ * Notas Markdown gestionadas por administradores (sección /notas).
+ */
 model AdminNote {
   id        String   @id @default(cuid())
   title     String
@@ -51,12 +64,12 @@ model AdminNote {
 }
 
 model FriendRequest {
-  id         String               @id @default(cuid())
+  id         String              @id @default(cuid())
   fromUserId String
   toUserId   String
-  status     FriendRequestStatus  @default(PENDING)
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
+  status     FriendRequestStatus @default(PENDING)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 
   fromUser User @relation("FriendRequestFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
   toUser   User @relation("FriendRequestTo", fields: [toUserId], references: [id], onDelete: Cascade)
@@ -67,24 +80,56 @@ model FriendRequest {
 }
 
 model Event {
-  id                   String   @id @default(cuid())
-  userId               String
-  title                String
-  description          String?
-  location             String?
-  startAt              DateTime
-  endAt                DateTime
-  color                String   @default("bg-blue-500")
-  attendees            String[] @default([])
-  /** Usuarios amigos incluidos en el evento (solo IDs de amistad aceptada). */
-  participantUserIds   String[] @default([])
-  organizer            String?
-  /** Si ya se envió el recordatorio por correo el día del evento (cron). */
-  reminderEmailSentAt  DateTime?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  userId              String
+  title               String
+  description         String?
+  location            String?
+  startAt             DateTime
+  endAt               DateTime
+  color               String    @default("bg-blue-500")
+  attendees           String[]  @default([])
+  /**
+   * Usuarios amigos incluidos en el evento (solo IDs de amistad aceptada).
+   */
+  participantUserIds  String[]  @default([])
+  organizer           String?
+  /**
+   * Si ya se envió el recordatorio por correo el día del evento (cron).
+   */
+  reminderEmailSentAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, startAt])
+}
+
+/**
+ * Contactos rápidos por usuario. Usado por la IA para inferir el calendario
+ * (lane) cuando un evento menciona a una persona conocida (p. ej. «cumpleaños
+ * de Benjamin» → Familia). Se sugieren al usuario para guardarse al vuelo.
+ */
+model Contact {
+  id             String          @id @default(cuid())
+  userId         String
+  name           String
+  /**
+   * Versión normalizada (lowercase, sin acentos, espacios colapsados) para búsqueda.
+   */
+  normalizedName String
+  category       ContactCategory
+  /**
+   * Relación opcional libre escrita por el usuario o sugerida por la IA («hermano», «compañero», «amiga»).
+   */
+  relation       String?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, normalizedName])
+  @@index([userId])
 }
