@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Calendario</string>
+    <string name="login_title">Calendario inteligente</string>
+    <string name="email">Correo</string>
+    <string name="password">Contraseña</string>
+    <string name="sign_in">Entrar</string>
+    <string name="sign_out">Cerrar sesión</string>
+    <string name="my_events">Mis eventos</string>
+    <string name="sync_reminders">Sincronizar recordatorios</string>
+    <string name="reminder_channel_name">Recordatorios del calendario</string>
+    <string name="reminder_channel_desc">Avisos antes del evento y el día del evento</string>
+</resources>

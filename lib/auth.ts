@@ -2,9 +2,11 @@ import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { getServerSession } from "next-auth/next"
+import { headers } from "next/headers"
 import { z } from "zod"
 
 import { prisma } from "@/lib/prisma"
+import { verifyMobileAccessToken } from "@/lib/mobile-jwt"
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -70,6 +72,19 @@ export async function getCurrentSession() {
 }
 
 export async function getCurrentUserId() {
+  try {
+    const h = await headers()
+    const auth = h.get("authorization")
+    if (auth?.toLowerCase().startsWith("bearer ")) {
+      const raw = auth.slice(7).trim()
+      if (raw) {
+        const id = await verifyMobileAccessToken(raw)
+        if (id) return id
+      }
+    }
+  } catch {
+    // Sin cabeceras (p. ej. contexto no HTTP)
+  }
   const session = await getCurrentSession()
   return session?.user?.id
 }
