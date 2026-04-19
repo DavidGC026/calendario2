@@ -15,7 +15,7 @@ La app **no** habla con PostgreSQL ni con Adminer por HTTPS: habla con la **mism
 |------------|---------------------|
 | La URL en la que **abres el calendario en el navegador** (origen `https://…` donde responde Next.js) | Una URL que sea **solo** la base de datos o solo Adminer (suelen ser otros host o puertos) |
 
-Por defecto el proyecto usa `https://calendar-db.dvguzman.com` como `API_BASE_URL`. **Solo es correcto** si ese dominio hace de proxy a la aplicación Next.js (mismas rutas `/api/...` que en la web). Si tu web está en otro host (por ejemplo solo `https://calendario.dvguzman.com`), cambia el valor por defecto en `app/build.gradle.kts` o pásalo al compilar:
+Por defecto el proyecto usa `https://calendario.dvguzman.com` como `API_BASE_URL`. **Solo es correcto** si ese dominio hace de proxy a la aplicación Next.js (mismas rutas `/api/...` que en la web). Si tu web está en otro host (por ejemplo solo `https://calendario.dvguzman.com`), cambia el valor por defecto en `app/build.gradle.kts` o pásalo al compilar:
 
 ```bash
 ./gradlew :app:assembleDebug -PCALENDARIO_API_BASE_URL=https://tu-dominio-real

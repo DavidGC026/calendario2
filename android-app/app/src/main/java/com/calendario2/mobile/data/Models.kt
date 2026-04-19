@@ -41,3 +41,37 @@ data class EventDto(
     @SerializedName("emailRemindersEnabled")
     val emailRemindersEnabled: Boolean? = true,
 )
+
+data class CreateEventBody(
+    val title: String,
+    val eventDate: String,
+    val startTime: String,
+    val endTime: String,
+    val description: String? = null,
+    val location: String? = null,
+    val color: String? = null,
+    val reminderMinutesBefore: Int? = null,
+    val emailRemindersEnabled: Boolean? = true,
+    val allowConflict: Boolean? = false,
+)
+
+data class UpdateEventBody(
+    val title: String? = null,
+    val eventDate: String? = null,
+    val startTime: String? = null,
+    val endTime: String? = null,
+    val description: String? = null,
+    val location: String? = null,
+    val color: String? = null,
+    val reminderMinutesBefore: Int? = null,
+    val emailRemindersEnabled: Boolean? = null,
+    val allowConflict: Boolean? = false,
+)
+
+data class EventMutationResponse(
+    val event: EventDto?,
+    val conflicts: List<EventDto>? = null,
+    val notFound: Boolean? = null,
+)
+
+data class SuccessResponse(val success: Boolean)

@@ -15,7 +15,8 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         // Origen HTTPS donde está desplegada la app Next.js (misma API que la web). Sin barra final.
-        val baseUrl = project.findProperty("CALENDARIO_API_BASE_URL") as String? ?: "https://calendar-db.dvguzman.com"
+        // calendar-db.dvguzman.com es Adminer; la app Next.js está en calendario.dvguzman.com.
+        val baseUrl = project.findProperty("CALENDARIO_API_BASE_URL") as String? ?: "https://calendario.dvguzman.com"
         buildConfigField("String", "API_BASE_URL", "\"$baseUrl\"")
     }
 
@@ -65,6 +66,10 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("androidx.activity:activity-ktx:1.9.3")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

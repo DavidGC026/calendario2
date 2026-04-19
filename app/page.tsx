@@ -15,15 +15,19 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Download,
   FileText,
   ImagePlus,
   Loader2,
   LogOut,
   Menu,
+  Mic,
+  MicOff,
   Plus,
   Search,
   Send,
   Settings,
+  Smartphone,
   Sparkles,
   Trash2,
   UserPlus,
@@ -51,6 +55,7 @@ import {
   formatWeekRangeLabel,
   getWeekDates,
 } from "@/lib/calendar-view-utils"
+import { useVoiceInput } from "@/lib/use-voice-input"
 
 type CalendarEvent = {
   id: string
@@ -177,6 +182,17 @@ const copy = {
     chatAttachImage: "Adjuntar imagen",
     chatClearHistory: "Borrar historial del chat",
     chatDefaultImagePrompt: "Extrae fechas y horas de la imagen y agéndalas.",
+    chatRecord: "Grabar nota de voz",
+    chatRecording: "Grabando…",
+    chatTranscribing: "Transcribiendo…",
+    chatMicDenied: "No se pudo acceder al micrófono. Revisa los permisos del navegador.",
+    chatMicUnsupported: "Tu navegador no soporta grabación de voz.",
+    androidAppTitle: "Aplicación Android",
+    androidAppCta: "Descargar APK",
+    androidAppHint:
+      "Tras descargar, abre el APK desde el teléfono. Necesitarás permitir 'Instalación de fuentes desconocidas'. Después inicia sesión con el mismo correo y contraseña.",
+    androidAppMeta: "Versión",
+    androidAppUnavailable: "El APK aún no está publicado.",
     authRequired: "Debes iniciar sesión para acceder a tu calendario.",
     goToLogin: "Ir a login",
     loadEventsError: "No se pudieron cargar tus eventos",
@@ -291,6 +307,17 @@ const copy = {
     chatAttachImage: "Attach image",
     chatClearHistory: "Clear chat history",
     chatDefaultImagePrompt: "Extract dates and times from the image and add them to the calendar.",
+    chatRecord: "Record voice note",
+    chatRecording: "Recording…",
+    chatTranscribing: "Transcribing…",
+    chatMicDenied: "Could not access the microphone. Check your browser permissions.",
+    chatMicUnsupported: "Your browser does not support voice recording.",
+    androidAppTitle: "Android app",
+    androidAppCta: "Download APK",
+    androidAppHint:
+      "After download, open the APK from your phone. You'll need to allow 'Install unknown apps'. Then sign in with the same email and password.",
+    androidAppMeta: "Version",
+    androidAppUnavailable: "The APK is not published yet.",
     authRequired: "You must sign in to access your calendar.",
     goToLogin: "Go to login",
     loadEventsError: "Could not load your events",
@@ -462,6 +489,11 @@ export default function HomePage() {
   const [pendingChatFiles, setPendingChatFiles] = useState<File[]>([])
   const chatFileInputRef = useRef<HTMLInputElement>(null)
   const [chatError, setChatError] = useState("")
+  const voiceInput = useVoiceInput({
+    locale: language,
+    onTranscript: (text) =>
+      setChatInput((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text)),
+  })
   const [anchorDate, setAnchorDate] = useState(today)
   const [scrollNowNonce, setScrollNowNonce] = useState(0)
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week")
@@ -499,6 +531,13 @@ export default function HomePage() {
   const [friendActionMsg, setFriendActionMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null)
   const [sendingFriendRequest, setSendingFriendRequest] = useState(false)
   const [copiedId, setCopiedId] = useState(false)
+  const [androidApk, setAndroidApk] = useState<{
+    sizeMB: number
+    updatedAt: string
+    sha256: string
+    url: string
+  } | null>(null)
+  const [androidApkUnavailable, setAndroidApkUnavailable] = useState(false)
 
   const userId = session?.user?.id
   const chatId = userId ?? "calendar-ai-pending"
@@ -563,6 +602,45 @@ export default function HomePage() {
   useEffect(() => {
     if (settingsOpen && sessionStatus === "authenticated") void loadFriendsData()
   }, [settingsOpen, sessionStatus])
+
+  useEffect(() => {
+    if (!settingsOpen) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch("/api/android/version", { cache: "no-store" })
+        if (!res.ok) {
+          if (!cancelled) {
+            setAndroidApk(null)
+            setAndroidApkUnavailable(true)
+          }
+          return
+        }
+        const data = await res.json()
+        if (cancelled) return
+        if (data?.available) {
+          setAndroidApk({
+            sizeMB: data.sizeMB,
+            updatedAt: data.updatedAt,
+            sha256: data.sha256,
+            url: data.url,
+          })
+          setAndroidApkUnavailable(false)
+        } else {
+          setAndroidApk(null)
+          setAndroidApkUnavailable(true)
+        }
+      } catch {
+        if (!cancelled) {
+          setAndroidApk(null)
+          setAndroidApkUnavailable(true)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [settingsOpen])
 
   async function sendFriendRequestAction() {
     if (!friendIdInput.trim()) return
@@ -1835,6 +1913,37 @@ export default function HomePage() {
 
               <div className="mt-4 border-t border-white/10 pt-4">
                 <h3 className="flex items-center gap-2 font-medium text-white/90">
+                  <Smartphone className="h-4 w-4 text-violet-300" />
+                  {t.androidAppTitle}
+                </h3>
+                <p className="mt-1 text-xs text-white/55">{t.androidAppHint}</p>
+                {androidApk ? (
+                  <div className="mt-3 flex flex-col gap-2">
+                    <a
+                      href={androidApk.url}
+                      download="dvgcalendar.apk"
+                      className="inline-flex w-fit items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-sky-600 px-4 py-2 text-sm font-medium shadow-lg transition hover:brightness-110"
+                    >
+                      <Download className="h-4 w-4" />
+                      {t.androidAppCta}
+                      <span className="rounded-md bg-black/25 px-1.5 py-0.5 text-[11px] text-white/85">
+                        {androidApk.sizeMB} MB
+                      </span>
+                    </a>
+                    <p className="text-[11px] text-white/40">
+                      {t.androidAppMeta}: {new Date(androidApk.updatedAt).toLocaleString(language)} · sha256{" "}
+                      <code className="break-all">{androidApk.sha256.slice(0, 12)}…</code>
+                    </p>
+                  </div>
+                ) : androidApkUnavailable ? (
+                  <p className="mt-3 text-sm text-white/50">{t.androidAppUnavailable}</p>
+                ) : (
+                  <p className="mt-3 text-sm text-white/50">…</p>
+                )}
+              </div>
+
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <h3 className="flex items-center gap-2 font-medium text-white/90">
                   <UserPlus className="h-4 w-4 text-sky-300" />
                   {language === "es" ? "Añadir amigo" : "Add friend"}
                 </h3>
@@ -2122,6 +2231,43 @@ export default function HomePage() {
                 title={t.chatAttachImage}
               >
                 <ImagePlus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!voiceInput.isSupported) {
+                    setChatError(t.chatMicUnsupported)
+                    return
+                  }
+                  setChatError("")
+                  if (voiceInput.state === "recording") {
+                    await voiceInput.stop()
+                  } else if (voiceInput.state === "idle" || voiceInput.state === "error") {
+                    await voiceInput.start()
+                  }
+                }}
+                disabled={status === "streaming" || voiceInput.state === "transcribing"}
+                aria-pressed={voiceInput.state === "recording"}
+                className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border px-3 py-2 transition disabled:opacity-50 ${
+                  voiceInput.state === "recording"
+                    ? "border-rose-400/40 bg-rose-500/30 text-white"
+                    : "border-white/20 bg-white/[0.08] text-white/90 hover:bg-white/15"
+                }`}
+                title={
+                  voiceInput.state === "recording"
+                    ? t.chatRecording
+                    : voiceInput.state === "transcribing"
+                      ? t.chatTranscribing
+                      : t.chatRecord
+                }
+              >
+                {voiceInput.state === "transcribing" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : voiceInput.state === "recording" ? (
+                  <MicOff className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
               </button>
               <input
                 value={chatInput}

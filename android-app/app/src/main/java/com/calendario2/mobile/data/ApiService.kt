@@ -5,8 +5,11 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 interface CalendarioApi {
 
@@ -18,6 +21,18 @@ interface CalendarioApi {
 
     @GET("api/events")
     suspend fun events(): EventsResponse
+
+    @POST("api/events")
+    suspend fun createEvent(@Body body: CreateEventBody): EventMutationResponse
+
+    @PATCH("api/events/{id}")
+    suspend fun updateEvent(
+        @Path("id") id: String,
+        @Body body: UpdateEventBody,
+    ): EventMutationResponse
+
+    @DELETE("api/events/{id}")
+    suspend fun deleteEvent(@Path("id") id: String): SuccessResponse
 
     companion object {
         fun create(baseUrl: String, tokenProvider: () -> String?): CalendarioApi {
