@@ -1,6 +1,7 @@
 import {
   consumeStream,
   convertToModelMessages,
+  stepCountIs,
   streamText,
   UIMessage,
   tool,
@@ -40,6 +41,7 @@ import {
   runNotifyEventUpdated,
 } from "@/lib/event-notifications"
 import { listFriends, searchFriendsByHint } from "@/lib/friends"
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit"
 
 function toolErr(err: unknown) {
   return { success: false as const, error: err instanceof Error ? err.message : String(err) }
@@ -70,6 +72,12 @@ export async function POST(req: Request) {
   const userId = await getCurrentUserId()
   if (!userId) {
     return Response.json({ error: "No autenticado" }, { status: 401 })
+  }
+
+  // 30 mensajes/min por usuario (incluye reintentos por tool steps).
+  const rl = rateLimit(`chat:${userId}`, 30, 60_000)
+  if (!rl.allowed) {
+    return rateLimitResponse(rl, "Estás enviando demasiados mensajes a la IA. Espera unos segundos.")
   }
 
   const body = (await req.json()) as {
@@ -435,6 +443,9 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
       }),
     },
     abortSignal: req.signal,
+    // Permitir varias iteraciones: searchContact → (createContact) → createEvent → respuesta final.
+    // Sin esto, streamText se detiene tras 1 step y el modelo no responde nada después de la primera tool.
+    stopWhen: stepCountIs(8),
   })
 
   return result.toUIMessageStreamResponse({

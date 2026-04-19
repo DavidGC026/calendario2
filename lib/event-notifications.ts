@@ -5,6 +5,7 @@ import {
   sendEventUpdatedEmail,
 } from "@/lib/email"
 import type { EventDTO } from "@/lib/events"
+import { publishUserEvent } from "@/lib/events-bus"
 import { prisma } from "@/lib/prisma"
 
 let loggedMissingResendKey = false
@@ -22,6 +23,10 @@ function skipEmailWithLog(context: string): boolean {
 
 /** Ejecutar con await en route handlers / tools para que el envío termine en la misma petición (serverless no corta el trabajo). */
 export async function runNotifyEventCreated(ownerId: string, dto: EventDTO): Promise<void> {
+  publishUserEvent(ownerId, { type: "created", eventId: dto.id })
+  for (const p of dto.participants) {
+    publishUserEvent(p.id, { type: "created", eventId: dto.id })
+  }
   if (skipEmailWithLog("runNotifyEventCreated")) return
   try {
     const owner = await prisma.user.findUnique({
@@ -48,6 +53,10 @@ export async function runNotifyEventCreated(ownerId: string, dto: EventDTO): Pro
 }
 
 export async function runNotifyEventUpdated(ownerId: string, dto: EventDTO): Promise<void> {
+  publishUserEvent(ownerId, { type: "updated", eventId: dto.id })
+  for (const p of dto.participants) {
+    publishUserEvent(p.id, { type: "updated", eventId: dto.id })
+  }
   if (skipEmailWithLog("runNotifyEventUpdated")) return
   try {
     const owner = await prisma.user.findUnique({
@@ -65,6 +74,10 @@ export async function runNotifyEventUpdated(ownerId: string, dto: EventDTO): Pro
 }
 
 export async function runNotifyEventDeleted(ownerId: string, dto: EventDTO): Promise<void> {
+  publishUserEvent(ownerId, { type: "deleted", eventId: dto.id })
+  for (const p of dto.participants) {
+    publishUserEvent(p.id, { type: "deleted", eventId: dto.id })
+  }
   if (skipEmailWithLog("runNotifyEventDeleted")) return
   try {
     const owner = await prisma.user.findUnique({

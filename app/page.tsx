@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/sheet"
 import { CalendarSidebarContent, type CalendarCell } from "@/components/calendar-sidebar"
 import { CalendarWeekGrid } from "@/components/calendar-week-grid"
+import { CalendarFeedCard } from "@/components/calendar-feed-card"
+import { ContactsManager } from "@/components/contacts-manager"
 import { CALENDAR_LANE_COLORS, laneLabel } from "@/lib/calendar-lanes"
 import {
   addDays,
@@ -716,6 +718,53 @@ export default function HomePage() {
       void loadEvents()
     }
   }, [sessionStatus, language])
+
+  /**
+   * Suscripción SSE: cuando otro dispositivo / la IA / WhatsApp (futuro)
+   * crea, edita o borra un evento, refrescamos la lista en vivo. Si el
+   * navegador está en background, también refresca al volver al primer
+   * plano por si la conexión SSE se cortó.
+   */
+  useEffect(() => {
+    if (sessionStatus !== "authenticated") return
+    let es: EventSource | null = null
+    let cancelled = false
+    let pendingReload: ReturnType<typeof setTimeout> | null = null
+
+    const scheduleReload = () => {
+      if (pendingReload) return
+      pendingReload = setTimeout(() => {
+        pendingReload = null
+        if (!cancelled) void loadEvents()
+      }, 250)
+    }
+
+    try {
+      es = new EventSource("/api/events/stream")
+      es.addEventListener("change", scheduleReload)
+      es.onerror = () => {
+        if (es && es.readyState === EventSource.CLOSED && !cancelled) {
+          setTimeout(() => {
+            if (!cancelled) void loadEvents()
+          }, 5_000)
+        }
+      }
+    } catch {
+      /* navegador sin EventSource */
+    }
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void loadEvents()
+    }
+    document.addEventListener("visibilitychange", onVisible)
+
+    return () => {
+      cancelled = true
+      if (pendingReload) clearTimeout(pendingReload)
+      document.removeEventListener("visibilitychange", onVisible)
+      if (es) es.close()
+    }
+  }, [sessionStatus])
 
   useEffect(() => {
     const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY)
@@ -1779,6 +1828,10 @@ export default function HomePage() {
                   </ul>
                 </div>
               ) : null}
+
+              <ContactsManager language={language} inputClassName={inputGlass} />
+
+              <CalendarFeedCard language={language} />
 
               {isAdmin ? (
                 <div className="border-t border-white/10 pt-4">

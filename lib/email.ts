@@ -153,3 +153,19 @@ export async function sendFriendAcceptedEmail(params: { to: string; accepterName
   const inner = `<p><strong>${escHtml(who)}</strong> ha aceptado tu solicitud de amistad.</p>`
   await sendHtmlEmail(to, `${who} ha aceptado tu solicitud`, layout("Solicitud aceptada", inner))
 }
+
+export async function sendPasswordResetCodeEmail(params: {
+  to: string
+  code: string
+  expiresInMinutes: number
+}): Promise<{ ok: boolean; error?: string }> {
+  const { to, code, expiresInMinutes } = params
+  const inner = `<p>Has solicitado restablecer tu contraseña en <strong>Calendario inteligente</strong>.</p>
+<p>Introduce el siguiente código en la pantalla de la app para confirmar que este correo es tuyo:</p>
+<div class="card" style="text-align:center;">
+  <div style="font-size:32px;letter-spacing:0.4em;font-weight:700;color:#0f172a;font-family:'SFMono-Regular','Menlo','Consolas',monospace;">${escHtml(code)}</div>
+  <div class="row" style="margin-top:12px;">Caduca en ${expiresInMinutes} minutos.</div>
+</div>
+<p style="margin-top:16px;color:#64748b;font-size:13px;">Si no fuiste tú, puedes ignorar este correo: tu contraseña no cambiará. Solo cambia si alguien introduce el código.</p>`
+  return sendHtmlEmail(to, `Código para restablecer tu contraseña: ${code}`, layout("Restablecer contraseña", inner))
+}

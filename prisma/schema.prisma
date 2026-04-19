@@ -34,18 +34,51 @@ enum ContactCategory {
 }
 
 model User {
-  id                     String          @id @default(cuid())
-  email                  String          @unique
+  id                     String               @id @default(cuid())
+  email                  String               @unique
   passwordHash           String
   name                   String?
-  role                   Role            @default(USER)
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @updatedAt
+  role                   Role                 @default(USER)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  /**
+   * Token público (random URL-safe) usado para suscribir el calendario por
+   * `webcal://` o descargar el .ics sin sesión. Se puede regenerar desde
+   * Ajustes para invalidar suscripciones antiguas.
+   */
+  calendarFeedToken      String?              @unique
   events                 Event[]
-  friendRequestsSent     FriendRequest[] @relation("FriendRequestFrom")
-  friendRequestsReceived FriendRequest[] @relation("FriendRequestTo")
+  friendRequestsSent     FriendRequest[]      @relation("FriendRequestFrom")
+  friendRequestsReceived FriendRequest[]      @relation("FriendRequestTo")
   adminNotes             AdminNote[]
   contacts               Contact[]
+  passwordResetTokens    PasswordResetToken[]
+}
+
+/**
+ * Códigos de un solo uso para «Olvidé mi contraseña». Se guarda el hash
+ * del código (no el texto), expira en pocos minutos y queda inutilizable
+ * tras consumirse o tras varios intentos fallidos.
+ */
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  userId     String
+  /**
+   * Hash bcrypt del código numérico de 6 dígitos enviado por email.
+   */
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  /**
+   * Conteo de intentos fallidos contra este token (bloqueo por fuerza bruta).
+   */
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, consumedAt])
+  @@index([expiresAt])
 }
 
 /**
