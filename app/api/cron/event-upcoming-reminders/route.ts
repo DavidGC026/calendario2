@@ -33,6 +33,7 @@ export async function GET(req: Request) {
   // Filtramos en memoria porque el offset por evento es variable.
   const candidates = await prisma.event.findMany({
     where: {
+      emailRemindersEnabled: true,
       reminderUpcomingSentAt: null,
       reminderMinutesBefore: { not: null },
       startAt: {

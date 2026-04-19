@@ -26,6 +26,8 @@ export type EventDTO = {
   day: number
   /** Minutos antes del inicio para recordatorio extra. Null = sin aviso previo. */
   reminderMinutesBefore: number | null
+  /** Si false, no se envían correos de recordatorio para este evento. */
+  emailRemindersEnabled: boolean
 }
 
 /** Valores aceptados para el aviso "X minutos antes". null = sin aviso previo. */
@@ -56,6 +58,7 @@ type CreateEventInput = {
   participantNameHints?: string[] | null
   organizer?: string | null
   reminderMinutesBefore?: number | null
+  emailRemindersEnabled?: boolean
 }
 
 type UpdateEventInput = Partial<CreateEventInput>
@@ -122,6 +125,7 @@ export async function toEventDTO(event: Event): Promise<EventDTO> {
     organizer: event.organizer ?? "You",
     day: event.startAt.getDate(),
     reminderMinutesBefore: event.reminderMinutesBefore ?? null,
+    emailRemindersEnabled: event.emailRemindersEnabled,
   }
 }
 
@@ -185,6 +189,7 @@ export async function createEventForUser(userId: string, input: CreateEventInput
     return { event: null, conflicts: await Promise.all(conflicts.map(toEventDTO)) }
   }
 
+  const emailOn = input.emailRemindersEnabled !== false
   const event = await prisma.event.create({
     data: {
       userId,
@@ -197,7 +202,8 @@ export async function createEventForUser(userId: string, input: CreateEventInput
       attendees: input.attendees ?? [],
       participantUserIds,
       organizer: input.organizer ?? "You",
-      reminderMinutesBefore: sanitizeReminderMinutes(input.reminderMinutesBefore),
+      reminderMinutesBefore: emailOn ? sanitizeReminderMinutes(input.reminderMinutesBefore) : null,
+      emailRemindersEnabled: emailOn,
     },
   })
 
@@ -256,11 +262,18 @@ export async function updateEventForUser(
   const prevEndTime = formatTime(existing.endAt)
   const scheduleChanged = nextDate !== prevDate || st !== prevStartTime || et !== prevEndTime
 
+  const emailProvided = Object.prototype.hasOwnProperty.call(input, "emailRemindersEnabled")
+  const nextEmailReminders = emailProvided ? Boolean(input.emailRemindersEnabled) : existing.emailRemindersEnabled
+
   const reminderProvided = Object.prototype.hasOwnProperty.call(input, "reminderMinutesBefore")
-  const nextReminder = reminderProvided
+  let nextReminder = reminderProvided
     ? sanitizeReminderMinutes(input.reminderMinutesBefore)
     : existing.reminderMinutesBefore
+  if (!nextEmailReminders) {
+    nextReminder = null
+  }
   const reminderChanged = nextReminder !== existing.reminderMinutesBefore
+  const emailChanged = nextEmailReminders !== existing.emailRemindersEnabled
 
   const event = await prisma.event.update({
     where: { id: eventId },
@@ -274,11 +287,11 @@ export async function updateEventForUser(
       attendees: input.attendees ?? existing.attendees,
       participantUserIds: nextParticipants,
       organizer: input.organizer ?? existing.organizer,
+      emailRemindersEnabled: nextEmailReminders,
       reminderMinutesBefore: nextReminder,
       ...(scheduleChanged ? { reminderEmailSentAt: null } : {}),
-      // Si cambia hora o tipo de aviso, resetea el "ya enviado" para
-      // permitir un nuevo envío con el horario nuevo.
-      ...(scheduleChanged || reminderChanged ? { reminderUpcomingSentAt: null } : {}),
+      // Si cambia hora, tipo de aviso o activación de correos, resetea el aviso previo enviado.
+      ...(scheduleChanged || reminderChanged || emailChanged ? { reminderUpcomingSentAt: null } : {}),
     },
   })
 

@@ -67,6 +67,7 @@ type CalendarEvent = {
   organizer: string
   day: number
   reminderMinutesBefore: number | null
+  emailRemindersEnabled: boolean
 }
 
 type FriendRow = { id: string; email: string; name: string | null }
@@ -91,6 +92,7 @@ type EventPayload = {
   participantUserIds: string[]
   /** Minutos antes del inicio para recordatorio extra. null = sin aviso previo. */
   reminderMinutesBefore: number | null
+  emailRemindersEnabled: boolean
 }
 
 const REMINDER_OPTIONS: Array<{ value: number | null; label: string }> = [
@@ -121,6 +123,7 @@ const initialForm: EventPayload = {
   attendeesText: "",
   participantUserIds: [],
   reminderMinutesBefore: null,
+  emailRemindersEnabled: true,
 }
 
 const MAX_DATE = "2040-12-31"
@@ -927,6 +930,7 @@ export default function HomePage() {
       attendeesText: "",
       participantUserIds: [],
       reminderMinutesBefore: null,
+      emailRemindersEnabled: true,
     })
     setNaturalInput("")
   }
@@ -952,6 +956,7 @@ export default function HomePage() {
       attendeesText: event.attendees?.length ? event.attendees.join("\n") : "",
       participantUserIds: [...(event.participantUserIds ?? [])],
       reminderMinutesBefore: event.reminderMinutesBefore ?? null,
+      emailRemindersEnabled: event.emailRemindersEnabled !== false,
     })
     setEventConflict([])
     setEventsError("")
@@ -1543,41 +1548,76 @@ export default function HomePage() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="mb-1 block text-xs text-white/55">
-                  {language === "es" ? "Recordatorio por correo" : "Email reminder"}
+              <div className="rounded-xl border border-white/15 bg-white/[0.04] p-3">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={eventForm.emailRemindersEnabled}
+                    onChange={(e) =>
+                      setEventForm((prev) => ({
+                        ...prev,
+                        emailRemindersEnabled: e.target.checked,
+                        reminderMinutesBefore: e.target.checked ? prev.reminderMinutesBefore : null,
+                      }))
+                    }
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/30 bg-white/10"
+                  />
+                  <span className="text-sm text-white/88">
+                    {language === "es"
+                      ? "Recibir recordatorios por correo (día del evento ~8:00 y aviso previo opcional)"
+                      : "Email reminders (same day ~8:00 AM and optional advance notice)"}
+                  </span>
                 </label>
-                <select
-                  className={inputGlass}
-                  value={eventForm.reminderMinutesBefore ?? ""}
-                  onChange={(e) =>
+                <div className="mt-3">
+                  <label className="mb-1 block text-xs text-white/55">
+                    {language === "es" ? "Aviso adicional antes del inicio" : "Extra reminder before start"}
+                  </label>
+                  <select
+                    className={`${inputGlass} ${!eventForm.emailRemindersEnabled ? "cursor-not-allowed opacity-50" : ""}`}
+                    disabled={!eventForm.emailRemindersEnabled}
+                    value={eventForm.reminderMinutesBefore ?? ""}
+                    onChange={(e) =>
+                      setEventForm((prev) => ({
+                        ...prev,
+                        reminderMinutesBefore: e.target.value === "" ? null : Number(e.target.value),
+                      }))
+                    }
+                  >
+                    {REMINDER_OPTIONS.map((opt) => (
+                      <option key={opt.value ?? "none"} value={opt.value ?? ""} className="bg-slate-900">
+                        {language === "es"
+                          ? opt.label
+                          : opt.value === null
+                            ? "No extra reminder"
+                            : opt.value < 60
+                              ? `${opt.value} minutes before`
+                              : opt.value === 60
+                                ? "1 hour before"
+                                : opt.value === 1440
+                                  ? "1 day before"
+                                  : `${opt.value / 60} hours before`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="mt-2 text-[11px] text-white/45">
+                  {language === "es"
+                    ? "Si desactivas la casilla, no se enviará ningún correo de recordatorio para este evento."
+                    : "If you turn this off, no reminder emails will be sent for this event."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
                     setEventForm((prev) => ({
                       ...prev,
-                      reminderMinutesBefore: e.target.value === "" ? null : Number(e.target.value),
+                      emailRemindersEnabled: false,
+                      reminderMinutesBefore: null,
                     }))
                   }
+                  className="mt-2 text-xs font-medium text-rose-300/90 underline decoration-rose-400/40 underline-offset-2 transition hover:text-rose-200"
                 >
-                  {REMINDER_OPTIONS.map((opt) => (
-                    <option key={opt.value ?? "none"} value={opt.value ?? ""} className="bg-slate-900">
-                      {language === "es"
-                        ? opt.label
-                        : opt.value === null
-                          ? "No reminder"
-                          : opt.value < 60
-                            ? `${opt.value} minutes before`
-                            : opt.value === 60
-                              ? "1 hour before"
-                              : opt.value === 1440
-                                ? "1 day before"
-                                : `${opt.value / 60} hours before`}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-[11px] text-white/45">
-                  {language === "es"
-                    ? "Además del recordatorio del día, te llegará un correo este tiempo antes del inicio."
-                    : "On top of the same-day reminder, you'll get an email this long before the start."}
-                </p>
+                  {language === "es" ? "Quitar todos los recordatorios" : "Remove all reminders"}
+                </button>
               </div>
               <input
                 className={inputGlass}

@@ -25,6 +25,7 @@ export async function GET(req: Request) {
 
   const candidates = await prisma.event.findMany({
     where: {
+      emailRemindersEnabled: true,
       reminderEmailSentAt: null,
       startAt: { gte: windowStart, lte: windowEnd },
     },

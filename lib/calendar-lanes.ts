@@ -119,7 +119,17 @@ export function formatEventLineForContext(e: EventDTO, isEnglish: boolean): stri
       : ""
   const pid =
     e.participantUserIds?.length > 0 ? ` participantUserIds=[${e.participantUserIds.join(", ")}]` : ""
+  const rem =
+    e.emailRemindersEnabled === false
+      ? isEnglish
+        ? " | email reminders OFF"
+        : " | recordatorios por correo desactivados"
+      : e.reminderMinutesBefore
+        ? isEnglish
+          ? ` | reminder ${e.reminderMinutesBefore} min before`
+          : ` | aviso ${e.reminderMinutesBefore} min antes`
+        : ""
   return isEnglish
-    ? `- id=${e.id} | ${e.title} on ${e.eventDate} from ${e.startTime} to ${e.endTime} [${lane}]${people}${pid}${tail}`
-    : `- id=${e.id} | ${e.title} el ${e.eventDate} de ${e.startTime} a ${e.endTime} [${lane}]${people}${pid}${tail}`
+    ? `- id=${e.id} | ${e.title} on ${e.eventDate} from ${e.startTime} to ${e.endTime} [${lane}]${people}${pid}${rem}${tail}`
+    : `- id=${e.id} | ${e.title} el ${e.eventDate} de ${e.startTime} a ${e.endTime} [${lane}]${people}${pid}${rem}${tail}`
 }

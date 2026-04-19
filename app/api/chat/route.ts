@@ -180,20 +180,24 @@ ${isEnglish
 
 ${isEnglish ? "EMAIL REMINDERS:" : "RECORDATORIOS POR CORREO:"}
 ${isEnglish
-  ? `Every event already gets an automatic email at 8:00 AM the day it happens, but the user can also add an extra reminder "X minutes before" the start.
+  ? `Use emailRemindersEnabled (boolean, default true). If false, NO reminder emails are sent for that event (neither the 8:00 AM same-day email nor the "X minutes before" email).
+Every event with emailRemindersEnabled true gets an automatic email at 8:00 AM the day it happens, plus an optional extra reminder "X minutes before" the start.
 Allowed values for reminderMinutesBefore: null (no extra reminder), 5, 15, 30, 60, 120, 1440 (= 1 day before).
 Behaviour for createEvent / updateEvent:
-1. If the user explicitly says when to remind ("avísame 30 min antes", "recuérdamelo 1 día antes", "sin recordatorio"), set reminderMinutesBefore accordingly and DO NOT ask again.
-2. Otherwise, after creating the event, ask ONE short question: "¿Quieres un recordatorio extra antes del evento? Por ejemplo 15 min, 30 min, 1 hora o 1 día antes — o ninguno." Then call updateEvent with the chosen reminderMinutesBefore.
-3. If the user just answers a duration ("media hora", "una hora antes"), translate to minutes and pick the closest allowed value.
-4. For an event already in the past or starting in less than 5 minutes, do not ask and leave reminderMinutesBefore as null.`
-  : `Todos los eventos ya reciben un correo automático a las 8:00 AM del día que ocurren, pero el usuario también puede añadir un aviso extra «X minutos antes» del inicio.
-Valores permitidos para reminderMinutesBefore: null (sin aviso extra), 5, 15, 30, 60, 120, 1440 (= 1 día antes).
+1. If the user says they want NO emails ("sin recordatorios", "no me mandes correos", "desactiva avisos"), set emailRemindersEnabled: false and reminderMinutesBefore: null.
+2. If the user explicitly says when to remind ("avísame 30 min antes", "recuérdamelo 1 día antes"), set reminderMinutesBefore accordingly, keep emailRemindersEnabled true, and DO NOT ask again.
+3. Otherwise, after creating the event, ask ONE short question about extra advance reminder OR no emails. Then call updateEvent with reminderMinutesBefore and/or emailRemindersEnabled.
+4. If the user just answers a duration ("media hora", "una hora antes"), translate to minutes and pick the closest allowed value.
+5. For an event already in the past or starting in less than 5 minutes, do not ask and leave reminderMinutesBefore as null.`
+  : `Usa emailRemindersEnabled (boolean, por defecto true). Si es false, NO se envían correos de recordatorio para ese evento (ni el de las 8:00 del día ni el de «X minutos antes»).
+Con emailRemindersEnabled true, el usuario recibe un correo el día del evento (~8:00) y puede añadir un aviso extra «X minutos antes» del inicio.
+Valores para reminderMinutesBefore: null (sin aviso extra), 5, 15, 30, 60, 120, 1440 (= 1 día antes).
 Comportamiento al usar createEvent o updateEvent:
-1. Si el usuario indica explícitamente cuándo avisar («avísame 30 min antes», «recuérdamelo 1 día antes», «sin recordatorio»), pon reminderMinutesBefore en esa cifra y NO vuelvas a preguntar.
-2. Si no lo indica, después de crear el evento pregunta UNA sola línea corta: «¿Quieres un recordatorio extra antes del evento? Por ejemplo 15 min, 30 min, 1 hora o 1 día antes — o ninguno.» Luego llama a updateEvent con el reminderMinutesBefore elegido.
-3. Si el usuario responde solo con una duración («media hora», «una hora antes»), conviértela a minutos y usa el valor permitido más cercano.
-4. Si el evento ya pasó o empieza en menos de 5 minutos, no preguntes y deja reminderMinutesBefore en null.`}
+1. Si el usuario dice que NO quiere correos («sin recordatorios», «no me mandes correos», «quita los avisos»), pon emailRemindersEnabled: false y reminderMinutesBefore: null.
+2. Si indica explícitamente cuándo avisar («avísame 30 min antes», «recuérdamelo 1 día antes»), pon reminderMinutesBefore, deja emailRemindersEnabled en true y NO vuelvas a preguntar.
+3. Si no lo indica, después de crear el evento pregunta UNA línea corta sobre aviso extra o si prefiere sin correos. Luego llama a updateEvent con reminderMinutesBefore y/o emailRemindersEnabled.
+4. Si responde solo con una duración («media hora», «una hora antes»), conviértela a minutos y usa el valor permitido más cercano.
+5. Si el evento ya pasó o empieza en menos de 5 minutos, no preguntes y deja reminderMinutesBefore en null.`}
 
 ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre en español y de forma concisa."}${multimodalHint}${dateContext}${eventsContext}${friendsContext}${contactsContext}`,
     messages: await convertToModelMessages(messages),
@@ -351,6 +355,14 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
                 ? "Extra email reminder in minutes before the start. Allowed: null (none), 5, 15, 30, 60, 120, 1440. Only set if the user explicitly asked for it."
                 : "Aviso por correo X minutos antes del inicio. Valores: null (ninguno), 5, 15, 30, 60, 120, 1440. Pónlo solo si el usuario lo pidió explícitamente.",
             ),
+          emailRemindersEnabled: z
+            .boolean()
+            .optional()
+            .describe(
+              isEnglish
+                ? "If false, no reminder emails for this event. Default true."
+                : "Si es false, no se envían recordatorios por correo para este evento. Por defecto true.",
+            ),
           allowConflict: z.boolean().optional(),
         }),
         execute: async ({ allowConflict, color, ...rest }) => {
@@ -406,6 +418,14 @@ ${isEnglish ? "Respond in English and keep answers concise." : "Responde siempre
               isEnglish
                 ? "Extra email reminder in minutes before the start. Allowed: null (none), 5, 15, 30, 60, 120, 1440."
                 : "Aviso por correo X minutos antes del inicio. Valores: null (ninguno), 5, 15, 30, 60, 120, 1440.",
+            ),
+          emailRemindersEnabled: z
+            .boolean()
+            .optional()
+            .describe(
+              isEnglish
+                ? "If false, no reminder emails for this event."
+                : "Si es false, no se envían recordatorios por correo para este evento.",
             ),
           allowConflict: z.boolean().optional(),
         }),

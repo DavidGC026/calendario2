@@ -20,6 +20,7 @@ const updateEventSchema = z
     participantNameHints: z.array(z.string()).optional().nullable(),
     organizer: z.string().optional().nullable(),
     reminderMinutesBefore: z.number().int().nullable().optional(),
+    emailRemindersEnabled: z.boolean().optional(),
     allowConflict: z.boolean().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {

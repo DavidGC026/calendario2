@@ -141,6 +141,11 @@ model Event {
    * dobles envíos cuando el cron corre cada 5 minutos.
    */
   reminderUpcomingSentAt    DateTime?
+  /**
+   * Si es false, no se envían correos de recordatorio (ni el del día a las 8:00
+   * ni el aviso "X minutos antes"). El usuario puede volver a activarlos.
+   */
+  emailRemindersEnabled     Boolean   @default(true)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
