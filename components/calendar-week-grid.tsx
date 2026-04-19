@@ -53,10 +53,12 @@ export function CalendarWeekGrid({
   const isSingleDay = viewDates.length === 1
   const isMobile = useIsMobile()
   const slotH = isSingleDay && isMobile ? 64 : 48
-  const cols = isSingleDay ? "grid-cols-1" : "min-w-[640px] grid-cols-7"
+  const cols = isSingleDay ? "grid-cols-1" : "grid-cols-7 md:min-w-[640px]"
+  // En móvil: scroll vertical libre (las 7 columnas caben sin scroll horizontal).
+  // En desktop: scroll horizontal interno si el viewport es estrecho.
   const overflowClass = isSingleDay
     ? "touch-pan-y overflow-x-hidden"
-    : "touch-pan-x overflow-x-auto"
+    : "touch-pan-y overflow-x-hidden md:touch-pan-x md:overflow-x-auto"
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const totalHeight = hourRows.length * slotH
