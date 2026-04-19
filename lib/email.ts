@@ -303,6 +303,42 @@ export async function sendEventDayReminderEmail(params: {
   )
 }
 
+/**
+ * Recordatorio "X minutos antes" del inicio. Usado por el cron que corre
+ * cada pocos minutos cuando el usuario configura el campo
+ * `reminderMinutesBefore` en el evento.
+ */
+export async function sendEventUpcomingReminderEmail(params: {
+  to: string
+  event: EventDTO
+  minutesBefore: number
+}): Promise<{ ok: boolean; error?: string }> {
+  const { to, event, minutesBefore } = params
+
+  // Texto humano: "5 minutos", "1 hora", "1 día", etc.
+  let when: string
+  if (minutesBefore >= 1440) {
+    const days = Math.round(minutesBefore / 1440)
+    when = days === 1 ? "1 día" : `${days} días`
+  } else if (minutesBefore >= 60) {
+    const hours = Math.round(minutesBefore / 60)
+    when = hours === 1 ? "1 hora" : `${hours} horas`
+  } else {
+    when = `${minutesBefore} minutos`
+  }
+
+  const subj = `En ${when} · ${event.title}`
+  const intro = `<p>Tu evento <strong>${escHtml(event.title)}</strong> empieza en <strong>${when}</strong>.</p>`
+  return sendHtmlEmail(
+    to,
+    subj,
+    layout(`Empieza en ${when}`, `${intro}${eventBlock(event)}`, {
+      eyebrow: "Recordatorio",
+      accent: accentForColor(event.color),
+    }),
+  )
+}
+
 export async function sendFriendRequestEmail(params: {
   to: string
   fromName: string | null

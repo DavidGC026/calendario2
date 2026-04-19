@@ -131,12 +131,23 @@ model Event {
    * Si ya se envió el recordatorio por correo el día del evento (cron).
    */
   reminderEmailSentAt DateTime?
+  /**
+   * Aviso "X minutos antes" configurable por el usuario (en minutos). Null = sin
+   * recordatorio adicional al del día. Valores típicos: 5, 15, 30, 60, 120, 1440.
+   */
+  reminderMinutesBefore     Int?
+  /**
+   * Si ya se envió el recordatorio "X minutos antes" para este evento. Evita
+   * dobles envíos cuando el cron corre cada 5 minutos.
+   */
+  reminderUpcomingSentAt    DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, startAt])
+  @@index([reminderUpcomingSentAt, startAt])
 }
 
 /**

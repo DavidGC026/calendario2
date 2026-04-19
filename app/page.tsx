@@ -66,6 +66,7 @@ type CalendarEvent = {
   participants: { id: string; name: string | null; email: string }[]
   organizer: string
   day: number
+  reminderMinutesBefore: number | null
 }
 
 type FriendRow = { id: string; email: string; name: string | null }
@@ -88,7 +89,19 @@ type EventPayload = {
   /** Texto multilínea; al guardar se convierte en `attendees`. */
   attendeesText: string
   participantUserIds: string[]
+  /** Minutos antes del inicio para recordatorio extra. null = sin aviso previo. */
+  reminderMinutesBefore: number | null
 }
+
+const REMINDER_OPTIONS: Array<{ value: number | null; label: string }> = [
+  { value: null, label: "Sin aviso previo" },
+  { value: 5, label: "5 minutos antes" },
+  { value: 15, label: "15 minutos antes" },
+  { value: 30, label: "30 minutos antes" },
+  { value: 60, label: "1 hora antes" },
+  { value: 120, label: "2 horas antes" },
+  { value: 1440, label: "1 día antes" },
+]
 
 function attendeesFromText(s: string): string[] {
   return s
@@ -107,6 +120,7 @@ const initialForm: EventPayload = {
   color: "bg-blue-500",
   attendeesText: "",
   participantUserIds: [],
+  reminderMinutesBefore: null,
 }
 
 const MAX_DATE = "2040-12-31"
@@ -912,6 +926,7 @@ export default function HomePage() {
       color: inferredColor,
       attendeesText: "",
       participantUserIds: [],
+      reminderMinutesBefore: null,
     })
     setNaturalInput("")
   }
@@ -936,6 +951,7 @@ export default function HomePage() {
       color: event.color,
       attendeesText: event.attendees?.length ? event.attendees.join("\n") : "",
       participantUserIds: [...(event.participantUserIds ?? [])],
+      reminderMinutesBefore: event.reminderMinutesBefore ?? null,
     })
     setEventConflict([])
     setEventsError("")
@@ -1526,6 +1542,42 @@ export default function HomePage() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-white/55">
+                  {language === "es" ? "Recordatorio por correo" : "Email reminder"}
+                </label>
+                <select
+                  className={inputGlass}
+                  value={eventForm.reminderMinutesBefore ?? ""}
+                  onChange={(e) =>
+                    setEventForm((prev) => ({
+                      ...prev,
+                      reminderMinutesBefore: e.target.value === "" ? null : Number(e.target.value),
+                    }))
+                  }
+                >
+                  {REMINDER_OPTIONS.map((opt) => (
+                    <option key={opt.value ?? "none"} value={opt.value ?? ""} className="bg-slate-900">
+                      {language === "es"
+                        ? opt.label
+                        : opt.value === null
+                          ? "No reminder"
+                          : opt.value < 60
+                            ? `${opt.value} minutes before`
+                            : opt.value === 60
+                              ? "1 hour before"
+                              : opt.value === 1440
+                                ? "1 day before"
+                                : `${opt.value / 60} hours before`}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-white/45">
+                  {language === "es"
+                    ? "Además del recordatorio del día, te llegará un correo este tiempo antes del inicio."
+                    : "On top of the same-day reminder, you'll get an email this long before the start."}
+                </p>
               </div>
               <input
                 className={inputGlass}

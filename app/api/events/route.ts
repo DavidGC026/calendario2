@@ -19,6 +19,7 @@ const createEventSchema = z.object({
   participantUserIds: z.array(z.string()).optional().nullable(),
   participantNameHints: z.array(z.string()).optional().nullable(),
   organizer: z.string().optional().nullable(),
+  reminderMinutesBefore: z.number().int().nullable().optional(),
   allowConflict: z.boolean().optional(),
 })
 
