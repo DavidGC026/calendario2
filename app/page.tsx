@@ -20,6 +20,7 @@ import {
   Loader2,
   LogOut,
   Menu,
+  Plus,
   Search,
   Send,
   Settings,
@@ -38,6 +39,7 @@ import {
 } from "@/components/ui/sheet"
 import { CalendarSidebarContent, type CalendarCell } from "@/components/calendar-sidebar"
 import { CalendarWeekGrid } from "@/components/calendar-week-grid"
+import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { CalendarFeedCard } from "@/components/calendar-feed-card"
 import { ContactsManager } from "@/components/contacts-manager"
 import { CALENDAR_LANE_COLORS, laneLabel } from "@/lib/calendar-lanes"
@@ -956,6 +958,30 @@ export default function HomePage() {
     else moveMonth(delta)
   }
 
+  function openCreateAtHour(date: string, hour: number) {
+    const startTime = `${String(hour).padStart(2, "0")}:00`
+    const endTime = `${String(Math.min(hour + 1, 23)).padStart(2, "0")}:00`
+    setEditingEventId(null)
+    setEventForm({
+      ...initialForm,
+      eventDate: date,
+      startTime,
+      endTime,
+    })
+    setCreateOpen(true)
+  }
+
+  function handleSwipeDay(direction: -1 | 1) {
+    if (viewMode !== "day") return
+    setAnchorDate(addDays(anchorDate, direction))
+  }
+
+  function openCreateBlank() {
+    setEditingEventId(null)
+    setEventForm({ ...initialForm, eventDate: anchorDate })
+    setCreateOpen(true)
+  }
+
   const weekDates = useMemo(() => getWeekDates(anchorDate), [anchorDate])
 
   const navTitle = useMemo(() => {
@@ -1209,38 +1235,6 @@ export default function HomePage() {
                 </div>
               ) : null}
 
-              <div className="flex items-center gap-2 md:hidden">
-                <button
-                  type="button"
-                  onClick={goToToday}
-                  className="h-10 shrink-0 rounded-xl bg-sky-500/35 px-4 text-sm font-semibold text-sky-100 ring-1 ring-sky-400/35 transition active:bg-sky-500/55"
-                >
-                  {t.goToday}
-                </button>
-                <div className="flex flex-1 rounded-xl border border-white/15 bg-white/[0.06] p-1">
-                  {(
-                    [
-                      ["day", t.viewDay],
-                      ["week", t.viewWeek],
-                      ["month", t.viewMonth],
-                    ] as const
-                  ).map(([mode, label]) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setViewMode(mode)}
-                      className={`h-9 flex-1 rounded-lg text-xs font-semibold transition ${
-                        viewMode === mode
-                          ? "bg-sky-500/45 text-white shadow-md ring-1 ring-sky-400/40"
-                          : "text-white/65 active:bg-white/10"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <div className="hidden flex-wrap items-center gap-2 md:flex md:flex-1">
                 <button
                   type="button"
@@ -1328,7 +1322,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="px-safe pb-28 pt-3 md:min-h-0 md:flex-1 md:overflow-auto md:overscroll-contain md:px-6 md:py-4">
+          <div className="px-safe pb-[calc(env(safe-area-inset-bottom)+96px)] pt-3 md:pb-4 md:min-h-0 md:flex-1 md:overflow-auto md:overscroll-contain md:px-6 md:py-4">
             {loadingEvents && events.length === 0 ? (
               <div className="flex items-center justify-center gap-2 py-24 text-white/60">
                 <Loader2 className="h-8 w-8 animate-spin text-sky-300" />
@@ -1420,13 +1414,15 @@ export default function HomePage() {
                 today={today}
                 onEventClick={startEditEvent}
                 formatHour={formatHourLabel}
+                onCreateAtHour={openCreateAtHour}
+                onSwipeDay={handleSwipeDay}
               />
             )}
           </div>
         </div>
 
         {!aiWelcomeDismissed ? (
-          <div className="pointer-events-auto fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-4 right-4 z-[60] mx-auto max-w-sm rounded-2xl border border-white/20 bg-slate-950/90 p-4 shadow-[0_12px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:left-auto sm:right-[max(1.5rem,env(safe-area-inset-right))] sm:mx-0 md:right-8">
+          <div className="pointer-events-auto fixed left-4 right-4 z-[60] mx-auto max-w-sm rounded-2xl border border-white/20 bg-slate-950/90 p-4 shadow-[0_12px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl bottom-[calc(env(safe-area-inset-bottom)+76px)] md:bottom-[max(1.25rem,env(safe-area-inset-bottom))] sm:left-auto sm:right-[max(1.5rem,env(safe-area-inset-right))] sm:mx-0 md:right-8">
             <Sparkles className="mb-2 h-6 w-6 text-sky-300" />
             <p className="font-semibold text-white">{t.aiWelcomeTitle}</p>
             <p className="mt-1 text-sm text-white/70">{t.aiWelcomeBody}</p>
@@ -1451,15 +1447,32 @@ export default function HomePage() {
             </div>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setAiSheetOpen(true)}
-            className="pointer-events-auto fixed z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-sky-500 text-white shadow-xl ring-2 ring-white/30 bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] md:right-8"
-            aria-label={t.openChat}
-          >
-            <Sparkles className="h-6 w-6" />
-          </button>
+          <div className="pointer-events-none fixed z-[60] flex flex-col items-end gap-2 right-[max(1rem,env(safe-area-inset-right))] md:right-8 bottom-[calc(env(safe-area-inset-bottom)+72px)] md:bottom-[max(1.25rem,env(safe-area-inset-bottom))]">
+            <button
+              type="button"
+              onClick={() => setAiSheetOpen(true)}
+              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-sky-500 text-white shadow-xl ring-2 ring-white/25 transition active:scale-95"
+              aria-label={t.openChat}
+            >
+              <Sparkles className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={openCreateBlank}
+              className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-sky-500 text-white shadow-2xl ring-2 ring-sky-300/40 transition active:scale-95"
+              aria-label={t.sheetCreate}
+            >
+              <Plus className="h-6 w-6" />
+            </button>
+          </div>
         )}
+
+        <MobileBottomNav
+          viewMode={viewMode}
+          onChangeView={setViewMode}
+          onGoToday={goToToday}
+          labels={{ day: t.viewDay, week: t.viewWeek, month: t.viewMonth, today: t.goToday }}
+        />
 
         <Sheet open={createOpen} onOpenChange={setCreateOpen}>
           <SheetContent

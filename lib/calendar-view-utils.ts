@@ -55,6 +55,31 @@ export function formatWeekRangeLabel(
   return `${start.toLocaleDateString(locale, o)} – ${end.toLocaleDateString(locale, { day: "numeric" })}, ${end.getFullYear()}`
 }
 
+/**
+ * Minutos transcurridos en el día local (0-1439). Útil para colocar la
+ * línea "ahora" en la timeline.
+ */
+export function getCurrentDayMinutes(now: Date = new Date()): number {
+  return now.getHours() * 60 + now.getMinutes()
+}
+
+/**
+ * Devuelve el % vertical de un instante dentro de la timeline visible
+ * (DAY_START_MIN..DAY_END_MIN). Devuelve `null` si está fuera del rango,
+ * para que el llamador pueda decidir no renderizar la línea.
+ */
+export function minutesToTimelinePercent(minutes: number): number | null {
+  if (minutes < DAY_START_MIN || minutes > DAY_END_MIN) return null
+  return ((minutes - DAY_START_MIN) / DAY_TOTAL_MIN) * 100
+}
+
+/** Etiqueta corta HH:MM en 24h, sin localización (siempre estable). */
+export function formatHHMM(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+}
+
 export function eventBlockStyle(color: string): CSSProperties {
   const map: Record<string, string> = {
     "bg-blue-500": "linear-gradient(145deg, #3b82f6 0%, #2563eb 100%)",
