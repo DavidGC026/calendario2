@@ -62,22 +62,46 @@ export function laneLabel(locale: "es" | "en", laneId: string): string {
 export function calendarLanePromptBlock(isEnglish: boolean): string {
   if (isEnglish) {
     return `
-Calendar lanes (you MUST set "color" to exactly one of these Tailwind class strings when creating or updating events):
-- bg-blue-500 — "My calendar" (default / general)
-- bg-green-500 — Work (job, meetings, office)
-- bg-orange-500 — Personal (non-work personal life)
-- bg-purple-500 — Family (family, kids, home)
+Calendar lanes — you MUST set "color" on every createEvent / updateEvent call to EXACTLY one of:
+- bg-green-500 — Work: meetings, office, clients, projects, deliverables, sprint/scrum/demo, deadline, interviews, calls with manager/colleagues, "meeting about <product/app/project>", trainings related to the job.
+- bg-purple-500 — Family: birthdays of family members (parents, siblings, kids, grandparents, in-laws, partner), family dinners/lunches, picking kids up, school meetings, doctor for a family member, Christmas/Thanksgiving/etc., taking care of mom/dad.
+- bg-orange-500 — Personal (non-work, non-family): gym, your own doctor/dentist, haircut, hobbies, friends, dates, personal courses, personal travel, banking errands, friends' birthdays.
+- bg-blue-500 — "My calendar" (generic / default). ONLY use it when the user explicitly says so or after asking and the user replies "default / none".
 
-Infer the best lane from context. If unclear, use bg-blue-500.`
+Decision rules:
+1. If keywords or context clearly point to ONE lane (e.g. "brother", "mom", "kids", "mother-in-law" → Family; "client", "sprint", "deploy", "the app" → Work; "gym", "dentist", "haircut" → Personal), use that lane WITHOUT asking.
+2. If the event is ambiguous (e.g. just "appointment Friday 4pm", or "Ana's birthday" with no relationship clue), DO NOT call createEvent yet. First ask the user a single short question: "¿En qué calendario lo guardo: Trabajo, Personal o Familia?" / "Which calendar should I use: Work, Personal or Family?". Only after their reply, create the event with the right color.
+3. NEVER fall back silently to bg-blue-500. Either infer with confidence or ask.
+
+Examples:
+- "Cumpleaños de mi hermano Benjamin" → bg-purple-500 (Family)
+- "Reunión sobre la app móvil con el equipo" → bg-green-500 (Work)
+- "Dentista el martes a las 10" → bg-orange-500 (Personal)
+- "Cena con los suegros el sábado" → bg-purple-500 (Family)
+- "Demo del sprint el viernes 4pm" → bg-green-500 (Work)
+- "Cumple de Ana el 12 de mayo" (no relationship known) → ASK first.
+- "Cita el viernes a las 5" (zero context) → ASK first.`
   }
   return `
-Calendarios / colores (debes rellenar "color" con EXACTAMENTE una de estas clases Tailwind al crear o editar eventos):
-- bg-blue-500 — Mi calendario (general / por defecto)
-- bg-green-500 — Trabajo (reuniones laborales, oficina, clientes)
-- bg-orange-500 — Personal (vida personal, no laboral)
-- bg-purple-500 — Familia (familia, hijos, casa)
+Calendarios / colores — DEBES poner "color" en cada llamada a createEvent / updateEvent con EXACTAMENTE una de estas clases:
+- bg-green-500 — Trabajo: reuniones laborales, oficina, clientes, proyectos, entregas, sprint/scrum/demo, deadlines, entrevistas, llamadas con jefe/colegas, "reunión sobre <producto/app/proyecto>", formaciones del trabajo.
+- bg-purple-500 — Familia: cumpleaños de familiares (padres, hermanos, hijos, abuelos, suegros, pareja), comidas/cenas familiares, recoger a los niños, reuniones del cole, médico de un familiar, Navidad/Reyes/etc., cuidar de papá/mamá.
+- bg-orange-500 — Personal (ni trabajo ni familia): gimnasio, médico/dentista propio, peluquería, hobbies, amigos, citas/parejas, cursos personales, viajes personales, gestiones bancarias, cumpleaños de amigos no familiares.
+- bg-blue-500 — "Mi calendario" (genérico / por defecto). SOLO úsalo si el usuario lo pide explícitamente o si tras preguntar te dice "ninguno / por defecto".
 
-Elige el calendario según el contexto. Si no está claro, usa bg-blue-500.`
+Reglas de decisión:
+1. Si el contexto o palabras clave apuntan claramente a UN lane (p. ej. "hermano", "mamá", "hijos", "suegra" → Familia; "cliente", "sprint", "deploy", "la app", "el proyecto" → Trabajo; "gimnasio", "dentista", "peluquería" → Personal), úsalo SIN preguntar.
+2. Si el evento es ambiguo (p. ej. solo "cita el viernes a las 4" o "cumpleaños de Ana" sin saber si es amiga o familiar), NO llames a createEvent todavía. Pregunta UNA sola línea corta antes: "¿En qué calendario lo guardo: Trabajo, Personal o Familia?". Después de la respuesta del usuario, crea el evento con el color correcto.
+3. NUNCA caigas en bg-blue-500 por defecto en silencio. O infieres con seguridad o preguntas.
+
+Ejemplos:
+- "Cumpleaños de mi hermano Benjamin" → bg-purple-500 (Familia)
+- "Reunión sobre la app móvil con el equipo" → bg-green-500 (Trabajo)
+- "Dentista el martes a las 10" → bg-orange-500 (Personal)
+- "Cena con los suegros el sábado" → bg-purple-500 (Familia)
+- "Demo del sprint el viernes 4pm" → bg-green-500 (Trabajo)
+- "Cumple de Ana el 12 de mayo" (no se sabe quién es Ana) → PREGUNTAR primero.
+- "Cita el viernes a las 5" (sin contexto) → PREGUNTAR primero.`
 }
 
 export function formatEventLineForContext(e: EventDTO, isEnglish: boolean): string {

@@ -843,6 +843,12 @@ export default function HomePage() {
       return
     }
 
+    const allowedColors = ["bg-blue-500", "bg-green-500", "bg-orange-500", "bg-purple-500"] as const
+    const inferredColor =
+      typeof parsed.color === "string" && (allowedColors as readonly string[]).includes(parsed.color)
+        ? parsed.color
+        : "bg-blue-500"
+
     await saveEvent({
       title: parsed.title,
       eventDate: parsed.date ?? today,
@@ -850,7 +856,7 @@ export default function HomePage() {
       endTime: parsed.endTime ?? "10:00",
       description: parsed.description ?? "",
       location: parsed.location ?? "",
-      color: "bg-blue-500",
+      color: inferredColor,
       attendeesText: "",
       participantUserIds: [],
     })
