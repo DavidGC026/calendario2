@@ -445,6 +445,7 @@ export default function HomePage() {
   const chatFileInputRef = useRef<HTMLInputElement>(null)
   const [chatError, setChatError] = useState("")
   const [anchorDate, setAnchorDate] = useState(today)
+  const [scrollNowNonce, setScrollNowNonce] = useState(0)
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week")
   const [searchQuery, setSearchQuery] = useState("")
   const [laneOn, setLaneOn] = useState<Record<string, boolean>>({
@@ -950,6 +951,7 @@ export default function HomePage() {
 
   function goToToday() {
     setAnchorDate(today)
+    setScrollNowNonce((n) => n + 1)
   }
 
   function navigateCalendar(delta: number) {
@@ -1236,13 +1238,6 @@ export default function HomePage() {
               ) : null}
 
               <div className="hidden flex-wrap items-center gap-2 md:flex md:flex-1">
-                <button
-                  type="button"
-                  onClick={goToToday}
-                  className="min-h-10 shrink-0 rounded-lg bg-sky-500/35 px-3 py-2 text-sm font-medium text-sky-100 ring-1 ring-sky-400/35 transition hover:bg-sky-500/45"
-                >
-                  {t.goToday}
-                </button>
                 <div
                   className={`${glassInset} flex min-w-0 max-w-xs flex-1 items-center gap-2 px-3 py-2`}
                 >
@@ -1295,34 +1290,12 @@ export default function HomePage() {
                   >
                     {(session?.user?.email?.[0] ?? "U").toUpperCase()}
                   </div>
-                  <div className="flex rounded-xl border border-white/15 bg-white/[0.06] p-1">
-                    {(
-                      [
-                        ["day", t.viewDay],
-                        ["week", t.viewWeek],
-                        ["month", t.viewMonth],
-                      ] as const
-                    ).map(([mode, label]) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setViewMode(mode)}
-                        className={`min-h-10 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                          viewMode === mode
-                            ? "bg-sky-500/45 text-white shadow-md ring-1 ring-sky-400/40"
-                            : "text-white/55 hover:text-white/90"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="px-safe pb-[calc(env(safe-area-inset-bottom)+96px)] pt-3 md:pb-4 md:min-h-0 md:flex-1 md:overflow-auto md:overscroll-contain md:px-6 md:py-4">
+          <div className="px-safe pb-[calc(env(safe-area-inset-bottom)+96px)] pt-3 md:pb-24 md:min-h-0 md:flex-1 md:overflow-auto md:overscroll-contain md:px-6 md:pt-4">
             {loadingEvents && events.length === 0 ? (
               <div className="flex items-center justify-center gap-2 py-24 text-white/60">
                 <Loader2 className="h-8 w-8 animate-spin text-sky-300" />
@@ -1416,13 +1389,14 @@ export default function HomePage() {
                 formatHour={formatHourLabel}
                 onCreateAtHour={openCreateAtHour}
                 onSwipeDay={handleSwipeDay}
+                scrollNowNonce={scrollNowNonce}
               />
             )}
           </div>
         </div>
 
         {!aiWelcomeDismissed ? (
-          <div className="pointer-events-auto fixed left-4 right-4 z-[60] mx-auto max-w-sm rounded-2xl border border-white/20 bg-slate-950/90 p-4 shadow-[0_12px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl bottom-[calc(env(safe-area-inset-bottom)+76px)] md:bottom-[max(1.25rem,env(safe-area-inset-bottom))] sm:left-auto sm:right-[max(1.5rem,env(safe-area-inset-right))] sm:mx-0 md:right-8">
+          <div className="pointer-events-auto fixed left-4 right-4 z-[60] mx-auto max-w-sm rounded-2xl border border-white/20 bg-slate-950/90 p-4 shadow-[0_12px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl bottom-[calc(env(safe-area-inset-bottom)+76px)] md:bottom-[88px] sm:left-auto sm:right-[max(1.5rem,env(safe-area-inset-right))] sm:mx-0 md:right-8">
             <Sparkles className="mb-2 h-6 w-6 text-sky-300" />
             <p className="font-semibold text-white">{t.aiWelcomeTitle}</p>
             <p className="mt-1 text-sm text-white/70">{t.aiWelcomeBody}</p>
@@ -1447,7 +1421,7 @@ export default function HomePage() {
             </div>
           </div>
         ) : (
-          <div className="pointer-events-none fixed z-[60] flex flex-col items-end gap-2 right-[max(1rem,env(safe-area-inset-right))] md:right-8 bottom-[calc(env(safe-area-inset-bottom)+72px)] md:bottom-[max(1.25rem,env(safe-area-inset-bottom))]">
+          <div className="pointer-events-none fixed z-[60] flex flex-col items-end gap-2 right-[max(1rem,env(safe-area-inset-right))] md:right-8 bottom-[calc(env(safe-area-inset-bottom)+72px)] md:bottom-[88px]">
             <button
               type="button"
               onClick={() => setAiSheetOpen(true)}

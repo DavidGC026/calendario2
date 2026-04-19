@@ -34,6 +34,8 @@ type CalendarWeekGridProps = {
   onCreateAtHour?: (date: string, hour: number) => void
   /** Swipe horizontal en vista día. delta = -1 (anterior) | +1 (siguiente). */
   onSwipeDay?: (delta: -1 | 1) => void
+  /** Cambia para forzar re-scroll a "ahora" / primer evento (ej: al pulsar "Hoy"). */
+  scrollNowNonce?: number
 }
 
 const SWIPE_THRESHOLD_PX = 50
@@ -49,6 +51,7 @@ export function CalendarWeekGrid({
   formatHour,
   onCreateAtHour,
   onSwipeDay,
+  scrollNowNonce = 0,
 }: CalendarWeekGridProps) {
   const isSingleDay = viewDates.length === 1
   const isMobile = useIsMobile()
@@ -60,7 +63,7 @@ export function CalendarWeekGrid({
     ? "touch-pan-y overflow-x-hidden"
     : "touch-pan-y overflow-x-hidden md:touch-pan-x md:overflow-x-auto"
 
-  const containerRef = useRef<HTMLDivElement | null>(null)
+  const scrollAnchorRef = useRef<HTMLDivElement | null>(null)
   const totalHeight = hourRows.length * slotH
 
   // --- Línea de "ahora" (solo si hoy está en viewDates) ---
@@ -75,30 +78,36 @@ export function CalendarWeekGrid({
   }, [showNow])
   const nowPct = minutesToTimelinePercent(nowMinutes)
 
-  // --- Auto-scroll inicial en vista día ---
+  // --- Posición vertical del ancla de auto-scroll ---
+  // Calcula el % donde queremos centrar el viewport (hora actual si hoy está
+  // visible, primer evento o 08:00 en su defecto).
+  const reference = viewDates.includes(today) ? today : viewDates[0]
+  let targetMinutes: number
+  if (reference === today) {
+    targetMinutes = getCurrentDayMinutes()
+  } else {
+    const dayEvents = eventsByDate.get(reference) ?? []
+    const firstStart = dayEvents
+      .map((e) => parseTimeToMinutes(e.startTime))
+      .filter((m) => m >= DAY_START_MIN)
+      .sort((a, b) => a - b)[0]
+    targetMinutes = firstStart ?? 8 * 60
+  }
+  const clampedTarget = Math.max(DAY_START_MIN, Math.min(DAY_END_MIN, targetMinutes))
+  const anchorPct = ((clampedTarget - DAY_START_MIN) / DAY_TOTAL_MIN) * 100
+
+  // --- Auto-scroll: usa scrollIntoView que se dispara contra cualquier
+  // ancestor scrollable (window en móvil, panel desktop). ---
   useEffect(() => {
-    if (!isSingleDay) return
-    const node = containerRef.current
+    const node = scrollAnchorRef.current
     if (!node) return
-    const date = viewDates[0]
-    let targetMinutes: number
-    if (date === today) {
-      targetMinutes = getCurrentDayMinutes()
-    } else {
-      const dayEvents = eventsByDate.get(date) ?? []
-      const firstStart = dayEvents
-        .map((e) => parseTimeToMinutes(e.startTime))
-        .filter((m) => m >= DAY_START_MIN)
-        .sort((a, b) => a - b)[0]
-      targetMinutes = firstStart ?? 8 * 60
-    }
-    const clamped = Math.max(DAY_START_MIN, Math.min(DAY_END_MIN, targetMinutes))
-    const ratio = (clamped - DAY_START_MIN) / DAY_TOTAL_MIN
-    const targetTop = Math.max(0, ratio * totalHeight - node.clientHeight / 3)
-    node.scrollTo({ top: targetTop, behavior: "auto" })
-    // Solo cuando cambia el día visible o el dataset relevante
+    // Pequeño delay para esperar layout (sticky headers, fonts).
+    const id = window.setTimeout(() => {
+      node.scrollIntoView({ block: "center", behavior: "smooth" })
+    }, 80)
+    return () => window.clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSingleDay, viewDates[0], today, totalHeight])
+  }, [viewDates[0], viewDates[viewDates.length - 1], today, scrollNowNonce])
 
   // --- Swipe horizontal en vista día ---
   const touchRef = useRef<{ x: number; y: number; time: number } | null>(null)
@@ -124,7 +133,6 @@ export function CalendarWeekGrid({
 
   return (
     <div
-      ref={containerRef}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       className={`flex w-full rounded-2xl border border-white/15 bg-slate-950/60 md:bg-white/[0.07] [-webkit-overflow-scrolling:touch] md:backdrop-blur-xl md:min-h-[min(720px,85dvh)] ${overflowClass}`}
@@ -140,10 +148,11 @@ export function CalendarWeekGrid({
         ))}
       </div>
       <div className={`grid flex-1 gap-px ${cols}`}>
-        {viewDates.map((date) => {
+        {viewDates.map((date, dayIdx) => {
           const dayEvents = eventsByDate.get(date) ?? []
           const isToday = date === today
           const isAnchor = date === anchorDate
+          const isFirstColumn = dayIdx === 0
           const d = new Date(`${date}T12:00:00`)
           const wd = d.toLocaleDateString(undefined, { weekday: "short" })
           const dayNum = date.slice(8, 10)
@@ -188,6 +197,15 @@ export function CalendarWeekGrid({
                     />
                   )
                 })}
+
+                {isFirstColumn ? (
+                  <div
+                    ref={scrollAnchorRef}
+                    aria-hidden
+                    className="pointer-events-none absolute left-0 h-px w-px"
+                    style={{ top: `${anchorPct}%` }}
+                  />
+                ) : null}
 
                 {isToday && nowPct !== null ? (
                   <div

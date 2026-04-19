@@ -31,10 +31,10 @@ export function MobileBottomNav({
   return (
     <nav
       aria-label="Calendar navigation"
-      className="md:hidden pointer-events-auto fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-slate-950/90 backdrop-blur-xl"
+      className="pointer-events-auto fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-slate-950/90 backdrop-blur-xl md:inset-x-auto md:left-1/2 md:bottom-4 md:-translate-x-1/2 md:rounded-2xl md:border md:border-white/15 md:bg-slate-900/85 md:shadow-2xl"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="mx-auto flex max-w-md items-stretch justify-around px-2 pt-1.5 pb-1">
+      <ul className="mx-auto flex max-w-md items-stretch justify-around gap-1 px-2 pt-1.5 pb-1 md:gap-2 md:px-3 md:py-2">
         {tabs.map(({ id, label, Icon }) => {
           const active = viewMode === id
           return (
@@ -43,13 +43,13 @@ export function MobileBottomNav({
                 type="button"
                 onClick={() => onChangeView(id)}
                 aria-current={active ? "page" : undefined}
-                className={`flex w-full flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition-colors ${
+                className={`flex w-full items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition-colors md:gap-1.5 md:px-3 md:text-sm flex-col md:flex-row ${
                   active
                     ? "bg-sky-500/20 text-sky-200"
                     : "text-white/55 hover:text-white/85"
                 }`}
               >
-                <Icon className={`h-5 w-5 ${active ? "text-sky-300" : ""}`} />
+                <Icon className={`h-5 w-5 md:h-4 md:w-4 ${active ? "text-sky-300" : ""}`} />
                 <span>{label}</span>
               </button>
             </li>
@@ -59,9 +59,9 @@ export function MobileBottomNav({
           <button
             type="button"
             onClick={onGoToday}
-            className="flex w-full flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium text-white/55 transition-colors hover:text-white/85"
+            className="flex w-full items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-medium text-white/65 transition-colors hover:text-white/95 md:gap-1.5 md:px-3 md:text-sm flex-col md:flex-row"
           >
-            <Locate className="h-5 w-5" />
+            <Locate className="h-5 w-5 md:h-4 md:w-4" />
             <span>{labels.today}</span>
           </button>
         </li>
