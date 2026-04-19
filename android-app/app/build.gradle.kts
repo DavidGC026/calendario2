@@ -14,8 +14,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
-        // Sustituir por la URL pública de tu servidor (HTTPS), sin barra final.
-        val baseUrl = project.findProperty("CALENDARIO_API_BASE_URL") as String? ?: "https://example.com"
+        // Origen HTTPS donde está desplegada la app Next.js (misma API que la web). Sin barra final.
+        val baseUrl = project.findProperty("CALENDARIO_API_BASE_URL") as String? ?: "https://calendar-db.dvguzman.com"
         buildConfigField("String", "API_BASE_URL", "\"$baseUrl\"")
     }
 

@@ -7,17 +7,23 @@ Cliente **Kotlin + Jetpack Compose** alineado con el estilo oscuro de la web (sl
 - Android Studio Ladybug o superior (JDK 17).
 - Servidor con HTTPS y la API del monorepo desplegada (incluye `POST /api/mobile/login` y JWT Bearer).
 
-## Configurar la URL del servidor
+## Configurar la URL del servidor (importante)
 
-En `app/build.gradle.kts`, `defaultConfig` usa `CALENDARIO_API_BASE_URL` o el valor por defecto `https://example.com`.
+La app **no** habla con PostgreSQL ni con Adminer por HTTPS: habla con la **misma API REST que la página web** (`/api/events`, `/api/mobile/login`, etc.). Esa API es la que usa la base de datos por detrás.
 
-**Recomendado:** al generar el APK o desde la línea de comandos:
+| Debes usar | No uses para la app |
+|------------|---------------------|
+| La URL en la que **abres el calendario en el navegador** (origen `https://…` donde responde Next.js) | Una URL que sea **solo** la base de datos o solo Adminer (suelen ser otros host o puertos) |
+
+Por defecto el proyecto usa `https://calendar-db.dvguzman.com` como `API_BASE_URL`. **Solo es correcto** si ese dominio hace de proxy a la aplicación Next.js (mismas rutas `/api/...` que en la web). Si tu web está en otro host (por ejemplo solo `https://calendario.dvguzman.com`), cambia el valor por defecto en `app/build.gradle.kts` o pásalo al compilar:
 
 ```bash
-./gradlew :app:assembleDebug -PCALENDARIO_API_BASE_URL=https://tu-dominio.com
+./gradlew :app:assembleDebug -PCALENDARIO_API_BASE_URL=https://tu-dominio-real
 ```
 
-(Sin barra final; debe coincidir con el origen público de tu Next.js.)
+(Sin barra final.)
+
+**Cómo comprobar:** en el navegador abre `https://TU-DOMINIO/api/events` sin sesión: debe responder `401` o JSON de error de auth, **no** una página de Adminer ni error de conexión a Postgres.
 
 ## Abrir el proyecto
 
