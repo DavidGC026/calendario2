@@ -454,6 +454,7 @@ export default function HomePage() {
   const [aiSheetOpen, setAiSheetOpen] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [aiWelcomeDismissed, setAiWelcomeDismissed] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
 
   const monthFilter = anchorDate.slice(0, 7)
 
@@ -993,8 +994,8 @@ export default function HomePage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden text-white">
-      <div className="pointer-events-none absolute inset-0">
+    <main className="relative min-h-[100dvh] text-white md:overflow-hidden">
+      <div className="pointer-events-none fixed inset-0 -z-0">
         <Image
           src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070&auto=format&fit=crop"
           alt=""
@@ -1006,7 +1007,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(139,92,246,0.25),transparent)]" />
       </div>
 
-      <div className="relative z-10 flex min-h-[100dvh] w-full flex-col pb-safe md:flex-row">
+      <div className="relative z-10 flex w-full flex-col pb-safe md:h-[100dvh] md:min-h-[100dvh] md:flex-row md:overflow-hidden">
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
           <SheetContent
             side="left"
@@ -1077,126 +1078,202 @@ export default function HomePage() {
           />
         </aside>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="shrink-0 border-b border-white/10 bg-slate-950/45 px-safe py-3 backdrop-blur-xl md:px-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 md:gap-3">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className={`${glassInset} inline-flex min-h-11 min-w-11 items-center justify-center md:hidden`}
-                onClick={() => setMobileSidebarOpen(true)}
-                aria-label="Menu"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={goToToday}
-                className="min-h-10 shrink-0 rounded-lg bg-sky-500/35 px-3 py-2 text-sm font-medium text-sky-100 ring-1 ring-sky-400/35 transition hover:bg-sky-500/45"
-              >
-                {t.goToday}
-              </button>
-              <div className="flex items-center gap-0.5">
+        <div className="flex min-w-0 flex-1 flex-col md:min-h-0">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-white/10 bg-slate-950/80 px-safe py-2 backdrop-blur-xl md:static md:bg-slate-950/45 md:py-3 md:px-5">
+            <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
+              <div className="flex min-w-0 items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => navigateCalendar(-1)}
-                  className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2`}
-                  aria-label={t.prevMonth}
+                  className={`${glassInset} inline-flex h-11 w-11 shrink-0 items-center justify-center md:hidden`}
+                  onClick={() => setMobileSidebarOpen(true)}
+                  aria-label="Menu"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <Menu className="h-5 w-5" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => navigateCalendar(1)}
-                  className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2`}
-                  aria-label={t.nextMonth}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-              <h2 className="min-w-0 flex-1 text-base font-semibold capitalize leading-snug tracking-tight text-white sm:text-lg md:text-xl">
-                {navTitle}
-              </h2>
-              </div>
-              <div
-                className={`${glassInset} order-last flex w-full min-w-0 items-center gap-2 px-3 py-2 sm:order-none sm:w-auto sm:max-w-xs sm:flex-1 md:flex-initial`}
-              >
-                <Search className="h-4 w-4 shrink-0 text-white/45" />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-white/35 sm:text-sm"
-                  placeholder={t.searchPlaceholder}
-                  enterKeyHint="search"
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-              <div className={`${glassInset} flex min-h-10 items-center gap-1 px-2 py-1.5 text-sm`}>
-                <label className="text-white/50">{t.language}</label>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value as Locale)}
-                  className="cursor-pointer bg-transparent font-medium outline-none"
-                >
-                  <option value="es" className="bg-slate-900">
-                    ES
-                  </option>
-                  <option value="en" className="bg-slate-900">
-                    EN
-                  </option>
-                </select>
-              </div>
-              {isAdmin ? (
-                <Link
-                  href="/notas"
-                  className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2 transition hover:bg-white/[0.08]`}
-                  aria-label={t.notesPage}
-                  title={t.notesPage}
-                >
-                  <FileText className="h-4 w-4" />
-                </Link>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2`}
-                aria-label={t.settings}
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-              <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-sky-500 text-sm font-bold text-white ring-2 ring-white/25"
-                title={session?.user?.email ?? ""}
-              >
-                {(session?.user?.email?.[0] ?? "U").toUpperCase()}
-              </div>
-              <div className="flex w-full justify-center rounded-xl border border-white/15 bg-white/[0.06] p-1 sm:w-auto">
-                {(
-                  [
-                    ["day", t.viewDay],
-                    ["week", t.viewWeek],
-                    ["month", t.viewMonth],
-                  ] as const
-                ).map(([mode, label]) => (
+                <div className="flex min-w-0 flex-1 items-center gap-1">
                   <button
-                    key={mode}
                     type="button"
-                    onClick={() => setViewMode(mode)}
-                    className={`min-h-10 flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition sm:flex-initial sm:px-3 sm:py-1.5 ${
-                      viewMode === mode
-                        ? "bg-sky-500/45 text-white shadow-md ring-1 ring-sky-400/40"
-                        : "text-white/55 hover:text-white/90"
-                    }`}
+                    onClick={() => navigateCalendar(-1)}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white/85 transition active:bg-white/10 md:h-10 md:w-10"
+                    aria-label={t.prevMonth}
                   >
-                    {label}
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
-                ))}
+                  <h2 className="min-w-0 flex-1 truncate text-center text-sm font-semibold capitalize leading-snug tracking-tight text-white sm:text-base md:text-left md:text-lg lg:text-xl">
+                    {navTitle}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => navigateCalendar(1)}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white/85 transition active:bg-white/10 md:h-10 md:w-10"
+                    aria-label={t.nextMonth}
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileSearchOpen((v) => !v)}
+                  className={`${glassInset} inline-flex h-11 w-11 shrink-0 items-center justify-center md:hidden`}
+                  aria-label={t.searchPlaceholder}
+                  aria-pressed={mobileSearchOpen}
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen(true)}
+                  className={`${glassInset} inline-flex h-11 w-11 shrink-0 items-center justify-center md:hidden`}
+                  aria-label={t.settings}
+                >
+                  <Settings className="h-5 w-5" />
+                </button>
               </div>
+
+              {mobileSearchOpen ? (
+                <div className={`${glassInset} flex items-center gap-2 px-3 py-2 md:hidden`}>
+                  <Search className="h-4 w-4 shrink-0 text-white/45" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-white/35"
+                    placeholder={t.searchPlaceholder}
+                    enterKeyHint="search"
+                    autoFocus
+                  />
+                  {searchQuery ? (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="text-xs text-white/55"
+                      aria-label="Clear"
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="flex items-center gap-2 md:hidden">
+                <button
+                  type="button"
+                  onClick={goToToday}
+                  className="h-10 shrink-0 rounded-xl bg-sky-500/35 px-4 text-sm font-semibold text-sky-100 ring-1 ring-sky-400/35 transition active:bg-sky-500/55"
+                >
+                  {t.goToday}
+                </button>
+                <div className="flex flex-1 rounded-xl border border-white/15 bg-white/[0.06] p-1">
+                  {(
+                    [
+                      ["day", t.viewDay],
+                      ["week", t.viewWeek],
+                      ["month", t.viewMonth],
+                    ] as const
+                  ).map(([mode, label]) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setViewMode(mode)}
+                      className={`h-9 flex-1 rounded-lg text-xs font-semibold transition ${
+                        viewMode === mode
+                          ? "bg-sky-500/45 text-white shadow-md ring-1 ring-sky-400/40"
+                          : "text-white/65 active:bg-white/10"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hidden flex-wrap items-center gap-2 md:flex md:flex-1">
+                <button
+                  type="button"
+                  onClick={goToToday}
+                  className="min-h-10 shrink-0 rounded-lg bg-sky-500/35 px-3 py-2 text-sm font-medium text-sky-100 ring-1 ring-sky-400/35 transition hover:bg-sky-500/45"
+                >
+                  {t.goToday}
+                </button>
+                <div
+                  className={`${glassInset} flex min-w-0 max-w-xs flex-1 items-center gap-2 px-3 py-2`}
+                >
+                  <Search className="h-4 w-4 shrink-0 text-white/45" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-white/35"
+                    placeholder={t.searchPlaceholder}
+                    enterKeyHint="search"
+                  />
+                </div>
+                <div className="ml-auto flex items-center gap-2">
+                  <div className={`${glassInset} flex min-h-10 items-center gap-1 px-2 py-1.5 text-sm`}>
+                    <label className="text-white/50">{t.language}</label>
+                    <select
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value as Locale)}
+                      className="cursor-pointer bg-transparent font-medium outline-none"
+                    >
+                      <option value="es" className="bg-slate-900">
+                        ES
+                      </option>
+                      <option value="en" className="bg-slate-900">
+                        EN
+                      </option>
+                    </select>
+                  </div>
+                  {isAdmin ? (
+                    <Link
+                      href="/notas"
+                      className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2 transition hover:bg-white/[0.08]`}
+                      aria-label={t.notesPage}
+                      title={t.notesPage}
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Link>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setSettingsOpen(true)}
+                    className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2`}
+                    aria-label={t.settings}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </button>
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-sky-500 text-sm font-bold text-white ring-2 ring-white/25"
+                    title={session?.user?.email ?? ""}
+                  >
+                    {(session?.user?.email?.[0] ?? "U").toUpperCase()}
+                  </div>
+                  <div className="flex rounded-xl border border-white/15 bg-white/[0.06] p-1">
+                    {(
+                      [
+                        ["day", t.viewDay],
+                        ["week", t.viewWeek],
+                        ["month", t.viewMonth],
+                      ] as const
+                    ).map(([mode, label]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setViewMode(mode)}
+                        className={`min-h-10 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                          viewMode === mode
+                            ? "bg-sky-500/45 text-white shadow-md ring-1 ring-sky-400/40"
+                            : "text-white/55 hover:text-white/90"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto overscroll-contain px-safe py-4 md:px-6">
+          <div className="px-safe pb-28 pt-3 md:min-h-0 md:flex-1 md:overflow-auto md:overscroll-contain md:px-6 md:py-4">
             {loadingEvents && events.length === 0 ? (
               <div className="flex items-center justify-center gap-2 py-24 text-white/60">
                 <Loader2 className="h-8 w-8 animate-spin text-sky-300" />
