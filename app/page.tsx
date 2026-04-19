@@ -44,6 +44,7 @@ import { CalendarFeedCard } from "@/components/calendar-feed-card"
 import { ContactsManager } from "@/components/contacts-manager"
 import { CALENDAR_LANE_COLORS, laneLabel } from "@/lib/calendar-lanes"
 import {
+  accentHexForColor,
   addDays,
   eventBlockStyle,
   formatISODateLocal,
@@ -950,6 +951,9 @@ export default function HomePage() {
   }
 
   function goToToday() {
+    // Si estás en mes, salta a vista día sobre hoy (feedback claro siempre).
+    // Si ya estás en día/semana, mantiene la vista y vuelve al día actual.
+    if (viewMode === "month") setViewMode("day")
     setAnchorDate(today)
     setScrollNowNonce((n) => n + 1)
   }
@@ -1302,80 +1306,94 @@ export default function HomePage() {
                 {t.loadingEvents}
               </div>
             ) : viewMode === "month" ? (
-              <div className={`${glassPanel} p-4 md:p-5`}>
-                <div className={`${glassInset} p-3 md:p-4`}>
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-base font-medium capitalize text-white md:text-lg">{monthLabel}</h3>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => moveMonth(-1)}
-                        disabled={!canGoPrevMonth}
-                        className="rounded-xl border border-white/20 p-2 transition hover:bg-white/10 disabled:opacity-40"
-                        aria-label={t.prevMonth}
-                      >
-                        <ChevronLeft className="h-5 w-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveMonth(1)}
-                        disabled={!canGoNextMonth}
-                        className="rounded-xl border border-white/20 p-2 transition hover:bg-white/10 disabled:opacity-40"
-                        aria-label={t.nextMonth}
-                      >
-                        <ChevronRight className="h-5 w-5" />
-                      </button>
+              <div className="rounded-2xl border border-white/15 bg-slate-950/60 p-3 md:bg-white/[0.07] md:p-5 md:backdrop-blur-xl">
+                <div className="mb-3 flex items-center justify-between px-1">
+                  <h3 className="text-base font-semibold capitalize tracking-tight text-white md:text-lg">{monthLabel}</h3>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => moveMonth(-1)}
+                      disabled={!canGoPrevMonth}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/85 transition hover:bg-white/10 disabled:opacity-40"
+                      aria-label={t.prevMonth}
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveMonth(1)}
+                      disabled={!canGoNextMonth}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/85 transition hover:bg-white/10 disabled:opacity-40"
+                      aria-label={t.nextMonth}
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-white/55 md:text-xs">
+                  {t.weekdays.map((dayName) => (
+                    <div key={dayName} className="py-2">
+                      {dayName}
                     </div>
-                  </div>
-                  <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-white/50 md:text-sm">
-                    {t.weekdays.map((dayName) => (
-                      <div key={dayName} className="py-2">
-                        {dayName}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-1 grid grid-cols-7 gap-1.5">
-                    {calendarCells.map((cell) => {
-                      if (!cell.inCurrentMonth) {
-                        return (
-                          <div key={cell.date} className="min-h-[5.5rem] rounded-xl bg-white/[0.03] md:min-h-24" />
-                        )
-                      }
-                      const dayEvents = eventsByDateVisible.get(cell.date) ?? []
-                      const isSelected = anchorDate === cell.date
-                      const isTodayCell = cell.date === today
+                  ))}
+                </div>
+                <div className="mt-1 grid grid-cols-7 gap-1 md:gap-1.5">
+                  {calendarCells.map((cell) => {
+                    if (!cell.inCurrentMonth) {
                       return (
-                        <button
-                          type="button"
+                        <div
                           key={cell.date}
-                          onClick={() => setAnchorDate(cell.date)}
-                          className={`min-h-[5.5rem] rounded-xl border p-2 text-left transition md:min-h-24 ${
-                            isSelected
-                              ? "border-sky-400/80 bg-sky-500/20 shadow-[0_0_20px_rgba(56,189,248,0.25)]"
-                              : isTodayCell
-                                ? "border-white/35 bg-white/10 ring-1 ring-sky-400/40"
-                                : "border-white/10 bg-white/[0.06] hover:bg-white/12"
+                          className="min-h-[4.5rem] rounded-xl border border-white/[0.04] bg-slate-900/40 md:min-h-24"
+                        />
+                      )
+                    }
+                    const dayEvents = eventsByDateVisible.get(cell.date) ?? []
+                    const isSelected = anchorDate === cell.date
+                    const isTodayCell = cell.date === today
+                    return (
+                      <button
+                        type="button"
+                        key={cell.date}
+                        onClick={() => {
+                          setAnchorDate(cell.date)
+                          setViewMode("day")
+                        }}
+                        className={`group min-h-[4.5rem] rounded-xl border p-1.5 text-left transition active:scale-[0.98] md:min-h-24 md:p-2 ${
+                          isSelected
+                            ? "border-sky-400/80 bg-sky-500/25 shadow-[0_0_24px_rgba(56,189,248,0.3)]"
+                            : isTodayCell
+                              ? "border-sky-400/60 bg-slate-900/80 ring-1 ring-sky-400/40"
+                              : "border-white/10 bg-slate-900/60 hover:bg-slate-900/80"
+                        }`}
+                      >
+                        <p
+                          className={`text-xs font-semibold tabular-nums md:text-sm ${
+                            isTodayCell ? "text-sky-300" : "text-white/90"
                           }`}
                         >
-                          <p className="text-xs font-semibold text-white/90 md:text-sm">{cell.dayNumber}</p>
-                          <div className="mt-1 space-y-0.5">
-                            {dayEvents.slice(0, 2).map((event) => (
-                              <p
-                                key={event.id}
-                                className="truncate rounded-md px-1 py-0.5 text-[10px] text-white/95 md:text-xs"
-                                style={eventBlockStyle(event.color)}
-                              >
-                                {event.startTime} {event.title}
-                              </p>
-                            ))}
-                            {dayEvents.length > 2 ? (
-                              <p className="text-[10px] text-white/50">+{dayEvents.length - 2}</p>
-                            ) : null}
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
+                          {cell.dayNumber}
+                        </p>
+                        <div className="mt-1 space-y-0.5">
+                          {dayEvents.slice(0, 2).map((event) => (
+                            <p
+                              key={event.id}
+                              className="truncate rounded-md border-l-[3px] border-white/30 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-white/95 md:text-[11px]"
+                              style={{
+                                borderLeftColor: accentHexForColor(event.color),
+                                background: `${accentHexForColor(event.color)}26`,
+                              }}
+                            >
+                              <span className="tabular-nums opacity-80">{event.startTime}</span>{" "}
+                              {event.title}
+                            </p>
+                          ))}
+                          {dayEvents.length > 2 ? (
+                            <p className="text-[10px] font-medium text-white/55">+{dayEvents.length - 2}</p>
+                          ) : null}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             ) : (

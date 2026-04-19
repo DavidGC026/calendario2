@@ -80,6 +80,34 @@ export function formatHHMM(minutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
 }
 
+/**
+ * Color sólido (hex) correspondiente a la clase Tailwind del lane.
+ * Útil para usar como `borderLeftColor` o tintes con alpha en estilos inline.
+ */
+export function accentHexForColor(color: string): string {
+  switch (color) {
+    case "bg-green-500":
+      return "#22c55e"
+    case "bg-orange-500":
+      return "#f97316"
+    case "bg-purple-500":
+      return "#a855f7"
+    case "bg-pink-500":
+      return "#ec4899"
+    case "bg-yellow-500":
+      return "#eab308"
+    case "bg-cyan-500":
+      return "#06b6d4"
+    case "bg-red-500":
+      return "#ef4444"
+    case "bg-violet-500":
+      return "#8b5cf6"
+    case "bg-blue-500":
+    default:
+      return "#3b82f6"
+  }
+}
+
 export function eventBlockStyle(color: string): CSSProperties {
   const map: Record<string, string> = {
     "bg-blue-500": "linear-gradient(145deg, #3b82f6 0%, #2563eb 100%)",
