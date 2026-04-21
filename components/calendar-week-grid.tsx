@@ -60,8 +60,8 @@ export function CalendarWeekGrid({
   // En móvil: scroll vertical libre (las 7 columnas caben sin scroll horizontal).
   // En desktop: scroll horizontal interno si el viewport es estrecho.
   const overflowClass = isSingleDay
-    ? "touch-pan-y overflow-x-hidden"
-    : "touch-pan-y overflow-x-hidden md:touch-pan-x md:overflow-x-auto"
+    ? "touch-pan-y overflow-x-hidden overflow-y-auto"
+    : "touch-pan-y overflow-x-hidden overflow-y-auto md:touch-pan-x md:overflow-x-auto"
 
   const scrollAnchorRef = useRef<HTMLDivElement | null>(null)
   const totalHeight = hourRows.length * slotH
@@ -135,8 +135,11 @@ export function CalendarWeekGrid({
     <div
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      className={`flex w-full rounded-2xl border border-white/15 bg-slate-950/60 md:bg-white/[0.07] [-webkit-overflow-scrolling:touch] md:backdrop-blur-xl md:min-h-[min(720px,85dvh)] ${overflowClass}`}
+      className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/15 bg-slate-950/60 md:bg-white/[0.07] md:backdrop-blur-xl"
     >
+      <div
+        className={`flex min-h-0 min-w-0 flex-1 overscroll-contain [-webkit-overflow-scrolling:touch] ${overflowClass}`}
+      >
       <div
         className="sticky left-0 z-20 w-12 shrink-0 border-r border-white/10 bg-slate-950/60 py-2 text-right text-[11px] font-medium tabular-nums text-white/55 sm:w-14 md:w-14"
         style={{ paddingTop: 40 }}
@@ -255,6 +258,7 @@ export function CalendarWeekGrid({
             </div>
           )
         })}
+      </div>
       </div>
     </div>
   )

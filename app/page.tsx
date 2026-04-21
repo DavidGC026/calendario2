@@ -1202,7 +1202,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="relative min-h-[100dvh] text-white md:overflow-hidden">
+    <main className="relative flex min-h-[100dvh] flex-col text-white md:overflow-hidden">
       <div className="pointer-events-none fixed inset-0 -z-0">
         <Image
           src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070&auto=format&fit=crop"
@@ -1215,7 +1215,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(139,92,246,0.25),transparent)]" />
       </div>
 
-      <div className="relative z-10 flex w-full flex-col pb-safe md:h-[100dvh] md:min-h-[100dvh] md:flex-row md:overflow-hidden">
+      <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col pb-safe md:h-[100dvh] md:min-h-0 md:flex-row md:overflow-hidden md:pb-0">
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
           <SheetContent
             side="left"
@@ -1286,7 +1286,7 @@ export default function HomePage() {
           />
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col md:min-h-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:min-h-0">
           <div className="sticky top-0 z-30 shrink-0 border-b border-white/10 bg-slate-950/80 px-safe py-2 backdrop-blur-xl md:static md:bg-slate-950/45 md:py-3 md:px-5">
             <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
               <div className="flex min-w-0 items-center gap-2">
@@ -1420,15 +1420,15 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="px-safe pb-[calc(env(safe-area-inset-bottom)+96px)] pt-3 md:pb-24 md:min-h-0 md:flex-1 md:overflow-auto md:overscroll-contain md:px-6 md:pt-4">
+          <div className="flex min-h-0 flex-1 flex-col px-safe pb-[calc(env(safe-area-inset-bottom)+96px)] pt-3 md:overflow-hidden md:pb-32 md:pl-6 md:pr-6 md:pt-4">
             {loadingEvents && events.length === 0 ? (
-              <div className="flex items-center justify-center gap-2 py-24 text-white/60">
+              <div className="flex flex-1 items-center justify-center gap-2 py-24 text-white/60">
                 <Loader2 className="h-8 w-8 animate-spin text-sky-300" />
                 {t.loadingEvents}
               </div>
             ) : viewMode === "month" ? (
-              <div className="flex min-h-0 flex-col gap-3 md:min-h-0 md:max-h-[min(88dvh,920px)]">
-                <div className="rounded-2xl border border-white/15 bg-slate-950/60 p-3 md:bg-white/[0.07] md:p-5 md:backdrop-blur-xl">
+              <div className="flex min-h-0 flex-1 flex-col gap-3">
+                <div className="shrink-0 rounded-2xl border border-white/15 bg-slate-950/60 p-3 md:bg-white/[0.07] md:p-5 md:backdrop-blur-xl">
                   <div className="mb-3 flex items-center justify-between px-1">
                     <h3 className="text-base font-semibold capitalize tracking-tight text-white md:text-lg">{monthLabel}</h3>
                     <div className="flex items-center gap-1">
@@ -1517,8 +1517,8 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-white/15 bg-slate-950/70 p-3 backdrop-blur-xl md:p-4">
-                  <div className="mb-2 flex flex-wrap items-end justify-between gap-2 border-b border-white/10 pb-2">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border border-white/15 bg-slate-950/70 p-3 backdrop-blur-xl md:min-h-0 md:p-4">
+                  <div className="mb-2 flex shrink-0 flex-wrap items-end justify-between gap-2 border-b border-white/10 pb-2">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">{t.monthView}</p>
                       <p className="text-lg font-semibold capitalize leading-tight text-white md:text-xl">{monthAgendaDayLabel}</p>
@@ -1568,18 +1568,20 @@ export default function HomePage() {
                 </div>
               </div>
             ) : (
-              <CalendarWeekGrid
-                viewDates={viewDates}
-                hourRows={hourRows}
-                eventsByDate={eventsByDateVisible}
-                anchorDate={anchorDate}
-                today={today}
-                onEventClick={startEditEvent}
-                formatHour={formatHourLabel}
-                onCreateAtHour={openCreateAtHour}
-                onSwipeDay={handleSwipeDay}
-                scrollNowNonce={scrollNowNonce}
-              />
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col md:min-h-0">
+                <CalendarWeekGrid
+                  viewDates={viewDates}
+                  hourRows={hourRows}
+                  eventsByDate={eventsByDateVisible}
+                  anchorDate={anchorDate}
+                  today={today}
+                  onEventClick={startEditEvent}
+                  formatHour={formatHourLabel}
+                  onCreateAtHour={openCreateAtHour}
+                  onSwipeDay={handleSwipeDay}
+                  scrollNowNonce={scrollNowNonce}
+                />
+              </div>
             )}
           </div>
         </div>
