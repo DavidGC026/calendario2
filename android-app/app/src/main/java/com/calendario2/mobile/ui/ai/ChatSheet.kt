@@ -3,6 +3,7 @@ package com.calendario2.mobile.ui.ai
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,6 +22,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -83,6 +88,15 @@ fun ChatSheet(
 ) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val sheetInteraction = remember { MutableInteractionSource() }
+
+    fun trySend() {
+        if (sending) return
+        if (input.isBlank() && pendingImages.isEmpty()) return
+        val txt = input.trim()
+        input = ""
+        onSend(txt, pendingImages)
+    }
 
     LaunchedEffect(messages.size, messages.lastOrNull()?.text) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
@@ -99,6 +113,7 @@ fun ChatSheet(
                 .fillMaxWidth()
                 .fillMaxHeight(0.88f)
                 .align(Alignment.BottomCenter)
+                .imePadding()
                 .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
                 .background(DvgColors.Slate950.copy(alpha = 0.96f))
                 .border(
@@ -106,7 +121,10 @@ fun ChatSheet(
                     color = DvgColors.White15,
                     shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
                 )
-                .clickable(enabled = false) {}
+                .clickable(
+                    interactionSource = sheetInteraction,
+                    indication = null,
+                ) { /* consume toques: no cerrar al escribir / IME */ }
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -193,6 +211,9 @@ fun ChatSheet(
                     placeholder = { Text("Mensaje, imagen o voz…", color = DvgColors.White45) },
                     modifier = Modifier.weight(1f).glassInset(),
                     enabled = !sending,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { trySend() }),
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = DvgColors.White95,
@@ -211,11 +232,7 @@ fun ChatSheet(
                         .size(48.dp)
                         .clip(CircleShape)
                         .background(primaryGradient())
-                        .clickable(enabled = canSend) {
-                            val txt = input.trim()
-                            input = ""
-                            onSend(txt, pendingImages)
-                        },
+                        .clickable(enabled = canSend) { trySend() },
                     contentAlignment = Alignment.Center,
                 ) {
                     if (sending) {

@@ -167,6 +167,7 @@ const copy = {
     noEvents: "Aún no tienes eventos.",
     selectedDay: "Eventos del día seleccionado",
     selectedMonth: "Eventos del mes",
+    monthAgendaEmpty: "Sin eventos este día",
     clearDayFilter: "Ver todo el mes",
     prevMonth: "Mes anterior",
     nextMonth: "Mes siguiente",
@@ -292,6 +293,7 @@ const copy = {
     noEvents: "You don't have events yet.",
     selectedDay: "Selected day events",
     selectedMonth: "Month events",
+    monthAgendaEmpty: "No events this day",
     clearDayFilter: "Show full month",
     prevMonth: "Previous month",
     nextMonth: "Next month",
@@ -730,14 +732,29 @@ export default function HomePage() {
   }, [searchedEvents, laneOn])
 
   const visibleEvents = useMemo(() => {
-    if (viewMode === "day") return laneFiltered.filter((e) => e.eventDate === anchorDate)
+    if (viewMode === "day" || viewMode === "month") {
+      return laneFiltered.filter((e) => e.eventDate === anchorDate)
+    }
     if (viewMode === "week") {
       const w = getWeekDates(anchorDate)
       return laneFiltered.filter((e) => w.includes(e.eventDate))
     }
-    const prefix = anchorDate.slice(0, 7)
-    return laneFiltered.filter((e) => e.eventDate.startsWith(prefix))
+    return []
   }, [anchorDate, viewMode, laneFiltered])
+
+  const monthAgendaDayLabel = useMemo(() => {
+    const loc = language === "es" ? "es-ES" : "en-US"
+    return new Date(`${anchorDate}T12:00:00`).toLocaleDateString(loc, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    })
+  }, [anchorDate, language])
+
+  const monthAgendaSorted = useMemo(() => {
+    if (viewMode !== "month") return []
+    return [...visibleEvents].sort((a, b) => a.startTime.localeCompare(b.startTime))
+  }, [viewMode, visibleEvents])
 
   const eventsByDate = useMemo(() => {
     const mapped = new Map<string, CalendarEvent[]>()
@@ -1050,9 +1067,6 @@ export default function HomePage() {
   }
 
   function goToToday() {
-    // Si estás en mes, salta a vista día sobre hoy (feedback claro siempre).
-    // Si ya estás en día/semana, mantiene la vista y vuelve al día actual.
-    if (viewMode === "month") setViewMode("day")
     setAnchorDate(today)
     setScrollNowNonce((n) => n + 1)
   }
@@ -1137,7 +1151,7 @@ export default function HomePage() {
   }
 
   const listScopeLabel =
-    viewMode === "day" ? t.selectedDay : viewMode === "week" ? t.navTitleWeek : t.selectedMonth
+    viewMode === "week" ? t.navTitleWeek : t.selectedDay
 
   if (sessionStatus === "loading") {
     return (
@@ -1405,94 +1419,144 @@ export default function HomePage() {
                 {t.loadingEvents}
               </div>
             ) : viewMode === "month" ? (
-              <div className="rounded-2xl border border-white/15 bg-slate-950/60 p-3 md:bg-white/[0.07] md:p-5 md:backdrop-blur-xl">
-                <div className="mb-3 flex items-center justify-between px-1">
-                  <h3 className="text-base font-semibold capitalize tracking-tight text-white md:text-lg">{monthLabel}</h3>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => moveMonth(-1)}
-                      disabled={!canGoPrevMonth}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/85 transition hover:bg-white/10 disabled:opacity-40"
-                      aria-label={t.prevMonth}
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveMonth(1)}
-                      disabled={!canGoNextMonth}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/85 transition hover:bg-white/10 disabled:opacity-40"
-                      aria-label={t.nextMonth}
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-white/55 md:text-xs">
-                  {t.weekdays.map((dayName) => (
-                    <div key={dayName} className="py-2">
-                      {dayName}
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-1 grid grid-cols-7 gap-1 md:gap-1.5">
-                  {calendarCells.map((cell) => {
-                    if (!cell.inCurrentMonth) {
-                      return (
-                        <div
-                          key={cell.date}
-                          className="min-h-[4.5rem] rounded-xl border border-white/[0.04] bg-slate-900/40 md:min-h-24"
-                        />
-                      )
-                    }
-                    const dayEvents = eventsByDateVisible.get(cell.date) ?? []
-                    const isSelected = anchorDate === cell.date
-                    const isTodayCell = cell.date === today
-                    return (
+              <div className="flex min-h-0 flex-col gap-3 md:min-h-0 md:max-h-[min(88dvh,920px)]">
+                <div className="rounded-2xl border border-white/15 bg-slate-950/60 p-3 md:bg-white/[0.07] md:p-5 md:backdrop-blur-xl">
+                  <div className="mb-3 flex items-center justify-between px-1">
+                    <h3 className="text-base font-semibold capitalize tracking-tight text-white md:text-lg">{monthLabel}</h3>
+                    <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        key={cell.date}
-                        onClick={() => {
-                          setAnchorDate(cell.date)
-                          setViewMode("day")
-                        }}
-                        className={`group min-h-[4.5rem] rounded-xl border p-1.5 text-left transition active:scale-[0.98] md:min-h-24 md:p-2 ${
-                          isSelected
-                            ? "border-sky-400/80 bg-sky-500/25 shadow-[0_0_24px_rgba(56,189,248,0.3)]"
-                            : isTodayCell
-                              ? "border-sky-400/60 bg-slate-900/80 ring-1 ring-sky-400/40"
-                              : "border-white/10 bg-slate-900/60 hover:bg-slate-900/80"
-                        }`}
+                        onClick={() => moveMonth(-1)}
+                        disabled={!canGoPrevMonth}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/85 transition hover:bg-white/10 disabled:opacity-40"
+                        aria-label={t.prevMonth}
                       >
-                        <p
-                          className={`text-xs font-semibold tabular-nums md:text-sm ${
-                            isTodayCell ? "text-sky-300" : "text-white/90"
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveMonth(1)}
+                        disabled={!canGoNextMonth}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/85 transition hover:bg-white/10 disabled:opacity-40"
+                        aria-label={t.nextMonth}
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-white/55 md:text-xs">
+                    {t.weekdays.map((dayName, wi) => (
+                      <div key={dayName} className={`py-2 ${wi === 0 ? "text-red-300/90" : ""}`}>
+                        {dayName}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-1 grid grid-cols-7 gap-1 md:gap-1.5">
+                    {calendarCells.map((cell) => {
+                      if (!cell.inCurrentMonth) {
+                        return (
+                          <div
+                            key={cell.date}
+                            className="min-h-[3.75rem] rounded-xl border border-white/[0.04] bg-slate-900/40 md:min-h-[4.25rem]"
+                          />
+                        )
+                      }
+                      const dayEvents = eventsByDateVisible.get(cell.date) ?? []
+                      const isSelected = anchorDate === cell.date
+                      const isTodayCell = cell.date === today
+                      return (
+                        <button
+                          type="button"
+                          key={cell.date}
+                          onClick={() => setAnchorDate(cell.date)}
+                          className={`group flex min-h-[3.75rem] flex-col rounded-xl border p-1.5 text-left transition active:scale-[0.98] md:min-h-[4.25rem] md:p-2 ${
+                            isSelected
+                              ? "border-white/35 bg-slate-900/85 ring-1 ring-white/25"
+                              : isTodayCell
+                                ? "border-sky-400/60 bg-slate-900/80 ring-1 ring-sky-400/40"
+                                : "border-white/10 bg-slate-900/60 hover:bg-slate-900/80"
                           }`}
                         >
-                          {cell.dayNumber}
-                        </p>
-                        <div className="mt-1 space-y-0.5">
-                          {dayEvents.slice(0, 2).map((event) => (
-                            <p
-                              key={event.id}
-                              className="truncate rounded-md border-l-[3px] border-white/30 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-white/95 md:text-[11px]"
-                              style={{
-                                borderLeftColor: accentHexForColor(event.color),
-                                background: `${accentHexForColor(event.color)}26`,
-                              }}
+                          <div className="flex w-full items-center justify-center">
+                            <span
+                              className={`flex h-7 min-w-[1.75rem] items-center justify-center rounded-full text-xs font-semibold tabular-nums md:text-sm ${
+                                isTodayCell ? "ring-2 ring-white/80 ring-offset-1 ring-offset-slate-900" : ""
+                              } ${isTodayCell ? "text-sky-300" : "text-white/90"}`}
                             >
-                              <span className="tabular-nums opacity-80">{event.startTime}</span>{" "}
-                              {event.title}
-                            </p>
-                          ))}
-                          {dayEvents.length > 2 ? (
-                            <p className="text-[10px] font-medium text-white/55">+{dayEvents.length - 2}</p>
-                          ) : null}
-                        </div>
-                      </button>
-                    )
-                  })}
+                              {cell.dayNumber}
+                            </span>
+                          </div>
+                          {isSelected ? (
+                            <div className="mt-1 h-0.5 w-full rounded-full bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.6)]" />
+                          ) : (
+                            <div className="mt-1 h-0.5 w-full rounded-full bg-transparent" />
+                          )}
+                          <div className="mt-1 flex flex-col gap-0.5">
+                            {dayEvents.slice(0, 4).map((event) => (
+                              <div
+                                key={event.id}
+                                className="h-0.5 w-full rounded-full"
+                                style={{ backgroundColor: accentHexForColor(event.color) }}
+                              />
+                            ))}
+                            {dayEvents.length > 4 ? (
+                              <span className="text-[9px] font-medium text-white/45">+{dayEvents.length - 4}</span>
+                            ) : null}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-white/15 bg-slate-950/70 p-3 backdrop-blur-xl md:p-4">
+                  <div className="mb-2 flex flex-wrap items-end justify-between gap-2 border-b border-white/10 pb-2">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">{t.monthView}</p>
+                      <p className="text-lg font-semibold capitalize leading-tight text-white md:text-xl">{monthAgendaDayLabel}</p>
+                    </div>
+                    <span className="text-xs text-white/50">
+                      {monthAgendaSorted.length}{" "}
+                      {language === "es"
+                        ? monthAgendaSorted.length === 1
+                          ? "evento"
+                          : "eventos"
+                        : monthAgendaSorted.length === 1
+                          ? "event"
+                          : "events"}
+                    </span>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+                    {monthAgendaSorted.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-white/50">{t.monthAgendaEmpty}</p>
+                    ) : (
+                      <ul className="space-y-2 pr-1">
+                        {monthAgendaSorted.map((event) => (
+                          <li key={event.id}>
+                            <button
+                              type="button"
+                              onClick={() => startEditEvent(event)}
+                              className="flex w-full items-stretch gap-3 rounded-xl border border-white/10 bg-white/[0.05] p-2.5 text-left transition hover:bg-white/[0.09] active:scale-[0.99]"
+                            >
+                              <span className="w-12 shrink-0 pt-0.5 text-xs tabular-nums text-white/60">
+                                {event.startTime.slice(0, 5)}
+                              </span>
+                              <span
+                                className="w-1 shrink-0 rounded-full"
+                                style={{ backgroundColor: accentHexForColor(event.color) }}
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-medium text-white">{event.title}</span>
+                                <span className="text-[11px] text-white/50">
+                                  {event.startTime.slice(0, 5)} – {event.endTime.slice(0, 5)}
+                                </span>
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (

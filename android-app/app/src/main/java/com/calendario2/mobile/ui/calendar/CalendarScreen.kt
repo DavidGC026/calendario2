@@ -257,7 +257,7 @@ fun CalendarScreen(
             }
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when (mode) {
-                    CalendarMode.Month -> MonthView(
+                    CalendarMode.Month -> MonthAgendaView(
                         month = month,
                         selectedDate = selectedDate,
                         today = today,
@@ -265,8 +265,8 @@ fun CalendarScreen(
                         onSelectDate = { date ->
                             selectedDate = date
                             month = YearMonth.from(date)
-                            mode = CalendarMode.Day
                         },
+                        onEventClick = { detailEvent = it },
                     )
                     CalendarMode.Week -> WeekView(
                         selectedDate = selectedDate,
@@ -301,7 +301,6 @@ fun CalendarScreen(
             onGoToday = {
                 selectedDate = today
                 month = YearMonth.from(today)
-                if (mode == CalendarMode.Month) mode = CalendarMode.Day
             },
         )
         Spacer(Modifier.windowInsetsPadding(WindowInsets.navigationBars))
