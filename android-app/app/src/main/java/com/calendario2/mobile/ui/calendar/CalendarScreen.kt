@@ -327,10 +327,11 @@ fun CalendarScreen(
                 icon = Icons.Default.Add,
                 description = "Crear evento",
                 onClick = {
+                    val slot = CalendarUtils.suggestNextFreeSlot(selectedDate, events)
                     sheetDraft = EventDraft(
                         date = selectedDate,
-                        start = LocalTime.of(9, 0),
-                        end = LocalTime.of(10, 0),
+                        start = slot.first,
+                        end = slot.second,
                     )
                 },
             )

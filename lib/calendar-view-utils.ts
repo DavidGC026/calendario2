@@ -81,6 +81,45 @@ export function formatHHMM(minutes: number): string {
 }
 
 /**
+ * Primer intervalo libre de `durationMin` (por defecto 60) en el día, sin
+ * solapar eventos existentes. Así se pueden añadir varios eventos el mismo día
+ * sin chocar con el slot por defecto 9:00–10:00.
+ */
+export function suggestNextFreeSlot(
+  date: string,
+  events: Iterable<{ eventDate: string; startTime: string; endTime: string }>,
+  options?: { durationMin?: number },
+): { startTime: string; endTime: string } {
+  const durationMin = options?.durationMin ?? 60
+  const dayStart = DAY_START_MIN
+  const dayEnd = DAY_END_MIN
+
+  const intervals = [...events]
+    .filter((e) => e.eventDate === date)
+    .map((e) => {
+      const rawS = e.startTime.length >= 5 ? e.startTime.slice(0, 5) : e.startTime
+      const rawE = e.endTime.length >= 5 ? e.endTime.slice(0, 5) : e.endTime
+      let s = parseTimeToMinutes(rawS)
+      let end = parseTimeToMinutes(rawE)
+      if (Number.isNaN(s)) s = 9 * 60
+      if (Number.isNaN(end) || end <= s) end = s + durationMin
+      return { s, e: end }
+    })
+    .sort((a, b) => a.s - b.s)
+
+  const overlaps = (startMin: number, endMin: number) =>
+    intervals.some((iv) => startMin < iv.e && endMin > iv.s)
+
+  for (let start = dayStart; start + durationMin <= dayEnd; start += 30) {
+    const end = start + durationMin
+    if (!overlaps(start, end)) {
+      return { startTime: formatHHMM(start), endTime: formatHHMM(end) }
+    }
+  }
+  return { startTime: "09:00", endTime: "10:00" }
+}
+
+/**
  * Color sólido (hex) correspondiente a la clase Tailwind del lane.
  * Útil para usar como `borderLeftColor` o tintes con alpha en estilos inline.
  */

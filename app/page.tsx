@@ -54,6 +54,7 @@ import {
   formatISODateLocal,
   formatWeekRangeLabel,
   getWeekDates,
+  suggestNextFreeSlot,
 } from "@/lib/calendar-view-utils"
 import { useVoiceInput } from "@/lib/use-voice-input"
 
@@ -1095,9 +1096,16 @@ export default function HomePage() {
     setAnchorDate(addDays(anchorDate, direction))
   }
 
+  /** Nuevo evento: horario en el primer hueco libre del día (varios eventos/día sin conflicto por defecto). */
   function openCreateBlank() {
     setEditingEventId(null)
-    setEventForm({ ...initialForm, eventDate: anchorDate })
+    const slot = suggestNextFreeSlot(anchorDate, sortedEvents)
+    setEventForm({
+      ...initialForm,
+      eventDate: anchorDate,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+    })
     setCreateOpen(true)
   }
 
@@ -1235,7 +1243,7 @@ export default function HomePage() {
                 laneOn={laneOn}
                 setLaneOn={setLaneOn}
                 onCreate={() => {
-                  setCreateOpen(true)
+                  openCreateBlank()
                   setMobileSidebarOpen(false)
                 }}
                 createLabel={t.create}
@@ -1267,7 +1275,7 @@ export default function HomePage() {
             canGoNextMonth={canGoNextMonth}
             laneOn={laneOn}
             setLaneOn={setLaneOn}
-            onCreate={() => setCreateOpen(true)}
+            onCreate={openCreateBlank}
             createLabel={t.create}
             brandCalendar={t.brandCalendar}
             loadingEvents={loadingEvents}

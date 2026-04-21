@@ -44,6 +44,44 @@ object CalendarUtils {
         return events.filter { it.eventDate == iso }.sortedBy { it.startTime }
     }
 
+    private const val DEFAULT_SLOT_DURATION_MIN = 60
+
+    /**
+     * Primer hueco libre de 1 h entre [DAY_START_HOUR] y [DAY_END_HOUR] para poder
+     * crear varios eventos el mismo día sin repetir siempre 9:00–10:00 (conflicto).
+     */
+    fun suggestNextFreeSlot(date: LocalDate, events: List<EventDto>): Pair<LocalTime, LocalTime> {
+        val iso = date.toString()
+        val dayStartMin = DAY_START_HOUR * 60
+        val dayEndMin = DAY_END_HOUR * 60
+        val intervals = events
+            .filter { it.eventDate == iso }
+            .mapNotNull { ev ->
+                val st = parseLocalTime(ev.startTime.take(5)) ?: return@mapNotNull null
+                val enRaw = parseLocalTime(ev.endTime.take(5))
+                var s = st.hour * 60 + st.minute
+                var e = enRaw?.let { it.hour * 60 + it.minute } ?: (s + DEFAULT_SLOT_DURATION_MIN)
+                if (e <= s) e = s + DEFAULT_SLOT_DURATION_MIN
+                s to e
+            }
+            .sortedBy { it.first }
+
+        fun overlaps(start: Int, end: Int): Boolean =
+            intervals.any { start < it.second && end > it.first }
+
+        var start = dayStartMin
+        while (start + DEFAULT_SLOT_DURATION_MIN <= dayEndMin) {
+            val end = start + DEFAULT_SLOT_DURATION_MIN
+            if (!overlaps(start, end)) {
+                val st = LocalTime.of(start / 60, start % 60)
+                val en = st.plusMinutes(DEFAULT_SLOT_DURATION_MIN.toLong())
+                return st to en
+            }
+            start += 30
+        }
+        return LocalTime.of(9, 0) to LocalTime.of(10, 0)
+    }
+
     fun shortDayName(d: DayOfWeek): String =
         d.getDisplayName(TextStyle.SHORT, LOCALE_ES).uppercase().take(3)
 
