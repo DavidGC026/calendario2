@@ -70,7 +70,7 @@ interface LayoutOptions {
 }
 
 function layout(title: string, inner: string, options: LayoutOptions = {}): string {
-  const accent = options.accent ?? { solid: "#0ea5e9", soft: "#7c3aed" } // sky → violet
+  const accent = options.accent ?? { solid: "#e11d48", soft: "#2563eb" } // rose → blue
   const ctaUrl = options.ctaUrl ?? process.env.PUBLIC_APP_URL ?? ""
   const ctaLabel = options.ctaLabel ?? "Abrir Calendario"
   const showCta = Boolean(ctaUrl)

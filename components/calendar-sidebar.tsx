@@ -95,7 +95,7 @@ export function CalendarSidebarContent({
     >
       <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-4">
         <div className="flex items-center gap-2">
-          <CalendarDays className="h-6 w-6 text-sky-300" />
+          <CalendarDays className="h-6 w-6 text-rose-300" />
           <span className="text-lg font-semibold tracking-tight text-white">{brandCalendar}</span>
         </div>
       </div>
@@ -103,7 +103,7 @@ export function CalendarSidebarContent({
       <button
         type="button"
         onClick={onCreate}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-900/40 transition hover:opacity-95"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-900/40 transition hover:opacity-95"
       >
         <Plus className="h-5 w-5" />
         {createLabel}
@@ -115,7 +115,7 @@ export function CalendarSidebarContent({
           <button
             type="button"
             onClick={onGoToday}
-            className="rounded-lg bg-sky-500/30 px-2 py-1 text-xs font-medium text-sky-100 ring-1 ring-sky-400/30 transition hover:bg-sky-500/40"
+            className="rounded-lg bg-blue-500/30 px-2 py-1 text-xs font-medium text-blue-100 ring-1 ring-blue-400/30 transition hover:bg-blue-500/40"
           >
             {t.goToday}
           </button>
@@ -141,15 +141,15 @@ export function CalendarSidebarContent({
                 onClick={() => onSelectDay(cell.date)}
                 className={`relative flex aspect-square min-h-[1.75rem] items-center justify-center rounded-lg text-[11px] font-medium transition ${
                   isSelected
-                    ? "bg-sky-500/50 text-white ring-2 ring-sky-300/90"
+                    ? "bg-rose-500/50 text-white ring-2 ring-rose-300/90"
                     : isTodayCell
-                      ? "bg-white/20 text-white ring-2 ring-sky-400/70"
+                      ? "bg-white/20 text-white ring-2 ring-rose-400/70"
                       : "text-white/85 hover:bg-white/12"
                 }`}
               >
                 {cell.dayNumber}
                 {hasEvents ? (
-                  <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-sky-300 shadow-[0_0_6px_rgba(125,211,252,0.9)]" />
+                  <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-rose-300 shadow-[0_0_6px_rgba(251,113,133,0.9)]" />
                 ) : null}
               </button>
             )
@@ -186,7 +186,7 @@ export function CalendarSidebarContent({
                 id={id}
                 checked={laneOn[id] ?? false}
                 onCheckedChange={(c) => setLaneOn((prev) => ({ ...prev, [id]: c === true }))}
-                className="border-white/40 data-[state=checked]:bg-sky-500 data-[state=checked]:border-sky-400"
+                className="border-white/40 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-400"
               />
               <label htmlFor={id} className="flex flex-1 cursor-pointer items-center gap-2 text-sm text-white/85">
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-sm ${id}`} />
@@ -226,7 +226,7 @@ export function CalendarSidebarContent({
                         {event.eventDate} · {event.startTime} – {event.endTime}
                       </p>
                       {(event.participants?.length || event.attendees?.length) ? (
-                        <p className="mt-1 line-clamp-2 text-[10px] text-sky-200/90">
+                        <p className="mt-1 line-clamp-2 text-[10px] text-rose-200/90">
                           {[
                             ...(event.participants?.map((p) => p.name ?? p.email) ?? []),
                             ...(event.attendees ?? []),
@@ -237,7 +237,7 @@ export function CalendarSidebarContent({
                     <div className="flex shrink-0 gap-1">
                       <button
                         type="button"
-                        className="rounded-md border border-white/15 p-1 text-sky-200 hover:bg-white/10"
+                        className="rounded-md border border-white/15 p-1 text-rose-200 hover:bg-white/10"
                         onClick={() => onEdit(event)}
                         aria-label={t.editEvent}
                       >

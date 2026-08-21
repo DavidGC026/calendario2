@@ -101,7 +101,7 @@ private fun DayHeaderBar(date: LocalDate, today: LocalDate) {
             if (isToday) {
                 Text(
                     text = "Hoy",
-                    color = DvgColors.Sky300,
+                    color = DvgColors.Rose300,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                 )

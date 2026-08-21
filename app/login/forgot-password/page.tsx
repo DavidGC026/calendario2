@@ -4,6 +4,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
+import { AppWallpaper } from "@/components/app-wallpaper"
+
 type Step = "request" | "confirm" | "done"
 
 export default function ForgotPasswordPage() {
@@ -98,8 +100,10 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-xl border border-white/10 bg-white/5 p-6 space-y-4">
+    <main className="relative min-h-screen overflow-hidden text-slate-100">
+      <AppWallpaper dimmer />
+      <div className="relative flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-2xl border border-white/20 bg-white/10 p-6 space-y-4 backdrop-blur-xl">
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold">Recuperar contraseña</h1>
           <p className="text-sm text-slate-300">
@@ -131,7 +135,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-md bg-blue-600 py-2 font-medium disabled:opacity-50"
+              className="w-full rounded-md bg-gradient-to-r from-rose-600 to-blue-600 py-2 font-medium disabled:opacity-50"
             >
               {loading ? "Enviando..." : "Enviar código"}
             </button>
@@ -198,7 +202,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-md bg-blue-600 py-2 font-medium disabled:opacity-50"
+              className="w-full rounded-md bg-gradient-to-r from-rose-600 to-blue-600 py-2 font-medium disabled:opacity-50"
             >
               {loading ? "Confirmando..." : "Cambiar contraseña"}
             </button>
@@ -235,7 +239,7 @@ export default function ForgotPasswordPage() {
             <p className="text-sm text-emerald-400">{info}</p>
             <Link
               href="/login"
-              className="inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium"
+              className="inline-block rounded-md bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 text-sm font-medium"
             >
               Ir al inicio de sesión
             </Link>
@@ -248,6 +252,7 @@ export default function ForgotPasswordPage() {
             Volver a iniciar sesión
           </Link>
         </p>
+      </div>
       </div>
     </main>
   )

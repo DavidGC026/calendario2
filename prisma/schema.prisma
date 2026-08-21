@@ -36,9 +36,17 @@ enum ContactCategory {
 model User {
   id                     String               @id @default(cuid())
   email                  String               @unique
-  passwordHash           String
+  /**
+   * Null cuando la cuenta se creó solo con Google y aún no definió contraseña.
+   */
+  passwordHash           String?
   name                   String?
   role                   Role                 @default(USER)
+  /**
+   * Acceso al chat, parseo en lenguaje natural y transcripción. Lo activa un
+   * administrador; por defecto nadie (salvo el seed de admin) lo tiene.
+   */
+  aiEnabled              Boolean              @default(false)
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   /**

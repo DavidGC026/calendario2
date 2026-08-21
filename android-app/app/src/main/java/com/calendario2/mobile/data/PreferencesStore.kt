@@ -31,6 +31,6 @@ class PreferencesStore(private val context: Context) {
     companion object {
         /** Foto por defecto (la misma que usa la web). */
         const val DEFAULT_BACKGROUND_URL =
-            "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070&auto=format&fit=crop"
+            "https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?q=80&w=2070&auto=format&fit=crop"
     }
 }

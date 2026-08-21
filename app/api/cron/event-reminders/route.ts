@@ -44,22 +44,15 @@ export async function GET(req: Request) {
     })
     if (!owner?.email) continue
 
-    const recipients = new Set<string>([owner.email])
-    for (const p of dto.participants) {
-      if (p.email) recipients.add(p.email)
-    }
-
-    const results = await Promise.all(
-      [...recipients].map((to) => sendEventDayReminderEmail({ to, event: dto })),
-    )
-    if (results.every((r) => r.ok)) {
+    const result = await sendEventDayReminderEmail({ to: owner.email, event: dto })
+    if (result.ok) {
       await prisma.event.update({
         where: { id: ev.id },
         data: { reminderEmailSentAt: new Date() },
       })
-      sent += results.length
+      sent += 1
     } else {
-      console.error("[cron/event-reminders] Fallo al enviar recordatorio", ev.id, results)
+      console.error("[cron/event-reminders] Fallo al enviar recordatorio", ev.id, result)
     }
   }
 

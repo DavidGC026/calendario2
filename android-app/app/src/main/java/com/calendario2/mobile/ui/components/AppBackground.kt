@@ -57,10 +57,23 @@ fun AppBackground(content: @Composable () -> Unit) {
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0x408b5cf6),
+                            Color(0x52e11d48),
                             Color(0x00000000),
                         ),
                         radius = 900f,
+                    ),
+                ),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            Color(0x472563eb),
+                            Color(0x00000000),
+                        ),
+                        radius = 1100f,
                     ),
                 ),
         )

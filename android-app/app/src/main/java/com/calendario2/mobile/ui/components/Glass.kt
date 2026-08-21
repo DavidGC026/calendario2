@@ -40,16 +40,15 @@ fun Modifier.glassInset(radius: Dp = 12.dp): Modifier =
         .border(BorderStroke(1.dp, DvgColors.White15), RoundedCornerShape(radius))
 
 /**
- * Botón primario violet → sky (igual que el FAB de IA y el botón "Aceptar"
- * del bienvenida en la web).
+ * Botón primario rose → blue (igual que los CTA de la web).
  */
 @Composable
 fun primaryGradient(): Brush = Brush.linearGradient(
-    colors = listOf(DvgColors.Violet600, DvgColors.Sky500),
+    colors = listOf(DvgColors.Rose600, DvgColors.Blue600),
 )
 
-/** Sky → blue (botón "Sí, abrir IA" en la web). */
+/** Rose → blue (botón de confirmación). */
 @Composable
 fun skyGradient(): Brush = Brush.linearGradient(
-    colors = listOf(DvgColors.Sky500, DvgColors.Blue600),
+    colors = listOf(DvgColors.Rose500, DvgColors.Blue600),
 )

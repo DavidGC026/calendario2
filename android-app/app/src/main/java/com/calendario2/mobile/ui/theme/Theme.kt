@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 /**
- * Paleta web (Tailwind sky + violet sobre slate-950) usada por la página
+ * Paleta web (Tailwind rose + blue sobre slate-950) usada por la página
  * principal y los correos. Mismo lenguaje visual que la app de escritorio.
  */
 object DvgColors {
@@ -21,14 +21,18 @@ object DvgColors {
     val Sky500 = Color(0xFF0ea5e9)
     val Sky600 = Color(0xFF0284c7)
 
+    val Rose300 = Color(0xFFfda4af)
+    val Rose400 = Color(0xFFfb7185)
+    val Rose500 = Color(0xFFf43f5e)
+    val Rose600 = Color(0xFFe11d48)
+
     val Violet400 = Color(0xFFa78bfa)
     val Violet500 = Color(0xFF8b5cf6)
     val Violet600 = Color(0xFF7c3aed)
 
+    val Blue400 = Color(0xFF60a5fa)
     val Blue500 = Color(0xFF3b82f6)
     val Blue600 = Color(0xFF2563eb)
-    val Rose500 = Color(0xFFf43f5e)
-    val Rose400 = Color(0xFFfb7185)
 
     val White95 = Color(0xF2FFFFFF)
     val White88 = Color(0xE0FFFFFF)
@@ -44,10 +48,10 @@ object DvgColors {
 }
 
 private val DvgColorScheme = darkColorScheme(
-    primary = DvgColors.Sky500,
+    primary = DvgColors.Rose500,
     onPrimary = Color.White,
-    primaryContainer = DvgColors.Sky600,
-    secondary = DvgColors.Violet500,
+    primaryContainer = DvgColors.Rose600,
+    secondary = DvgColors.Blue500,
     onSecondary = Color.White,
     tertiary = DvgColors.Rose500,
     onTertiary = Color.White,

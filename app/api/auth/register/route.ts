@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs"
 import { z } from "zod"
 
+import { findUserByEmail, normalizeEmail } from "@/lib/google-users"
 import { prisma } from "@/lib/prisma"
 
 const registerSchema = z.object({
@@ -20,15 +21,16 @@ export async function POST(req: Request) {
       )
     }
 
-    const { email, password, name } = parsed.data
-    const existing = await prisma.user.findUnique({ where: { email } })
+    const email = normalizeEmail(parsed.data.email)
+    const { password, name } = parsed.data
+    const existing = await findUserByEmail(email)
     if (existing) {
       return Response.json({ error: "Ese email ya está registrado" }, { status: 409 })
     }
 
     const passwordHash = await bcrypt.hash(password, 10)
     const user = await prisma.user.create({
-      data: { email, passwordHash, name },
+      data: { email, passwordHash, name, aiEnabled: false },
       select: { id: true, email: true, name: true },
     })
 

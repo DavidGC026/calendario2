@@ -71,7 +71,7 @@ fun WeekView(
                         .clickable { onSelectDay(d) }
                         .background(
                             when {
-                                isToday -> DvgColors.Sky500.copy(alpha = 0.10f)
+                                isToday -> DvgColors.Rose500.copy(alpha = 0.10f)
                                 isSel -> DvgColors.White5
                                 else -> Color.Transparent
                             },
@@ -87,7 +87,7 @@ fun WeekView(
                     )
                     Text(
                         text = d.dayOfMonth.toString(),
-                        color = if (isToday) DvgColors.Sky300 else DvgColors.White88,
+                        color = if (isToday) DvgColors.Rose300 else DvgColors.White88,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -139,7 +139,7 @@ private fun DayColumn(
     Box(
         modifier = modifier
             .height(totalHeight)
-            .background(if (isToday) DvgColors.Sky500.copy(alpha = 0.06f) else Color.Transparent)
+            .background(if (isToday) DvgColors.Rose500.copy(alpha = 0.06f) else Color.Transparent)
             .border(
                 width = 0.5.dp,
                 color = DvgColors.White10,

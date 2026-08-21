@@ -4,6 +4,9 @@ import Link from "next/link"
 import { useState } from "react"
 import { signIn } from "next-auth/react"
 
+import { GoogleAuthSection } from "@/components/google-auth-section"
+import { AppWallpaper } from "@/components/app-wallpaper"
+
 export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -46,8 +49,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-xl border border-white/10 bg-white/5 p-6 space-y-4">
+    <main className="relative min-h-screen overflow-hidden text-slate-100">
+      <AppWallpaper dimmer />
+      <div className="relative flex min-h-screen items-center justify-center px-4">
+      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-2xl border border-white/20 bg-white/10 p-6 space-y-4 backdrop-blur-xl">
         <h1 className="text-2xl font-semibold">Crear cuenta</h1>
         <p className="text-sm text-slate-300">Empieza a gestionar tus eventos con persistencia real.</p>
 
@@ -88,11 +93,13 @@ export default function RegisterPage() {
 
         <button
           disabled={loading}
-          className="w-full rounded-md bg-blue-600 py-2 font-medium disabled:opacity-50"
+          className="w-full rounded-md bg-gradient-to-r from-rose-600 to-blue-600 py-2 font-medium disabled:opacity-50"
           type="submit"
         >
           {loading ? "Creando cuenta..." : "Registrarme"}
         </button>
+
+        <GoogleAuthSection label="Registrarme con Google" />
 
         <p className="text-sm text-slate-300">
           ¿Ya tienes cuenta?{" "}
@@ -101,6 +108,7 @@ export default function RegisterPage() {
           </Link>
         </p>
       </form>
+      </div>
     </main>
   )
 }

@@ -71,24 +71,19 @@ export async function GET(req: Request) {
     })
     if (!owner?.email) continue
 
-    const recipients = new Set<string>([owner.email])
-    for (const p of dto.participants) {
-      if (p.email) recipients.add(p.email)
-    }
-
-    const results = await Promise.all(
-      [...recipients].map((to) =>
-        sendEventUpcomingReminderEmail({ to, event: dto, minutesBefore: minutes }),
-      ),
-    )
-    if (results.every((r) => r.ok)) {
+    const result = await sendEventUpcomingReminderEmail({
+      to: owner.email,
+      event: dto,
+      minutesBefore: minutes,
+    })
+    if (result.ok) {
       await prisma.event.update({
         where: { id: ev.id },
         data: { reminderUpcomingSentAt: new Date() },
       })
-      sent += results.length
+      sent += 1
     } else {
-      console.error("[cron/event-upcoming-reminders] Fallo al enviar", ev.id, results)
+      console.error("[cron/event-upcoming-reminders] Fallo al enviar", ev.id, result)
     }
   }
 

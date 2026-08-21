@@ -1,10 +1,12 @@
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
+import GoogleProvider from "next-auth/providers/google"
 import bcrypt from "bcryptjs"
 import { getServerSession } from "next-auth/next"
 import { headers } from "next/headers"
 import { z } from "zod"
 
+import { findUserByEmail, upsertGoogleUser } from "@/lib/google-users"
 import { prisma } from "@/lib/prisma"
 import { verifyMobileAccessToken } from "@/lib/mobile-jwt"
 
@@ -12,6 +14,10 @@ const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 })
+
+function googleProviderConfigured(): boolean {
+  return Boolean(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim())
+}
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET ?? "dev-only-secret-change-in-production",
@@ -30,10 +36,8 @@ export const authOptions: NextAuthOptions = {
         const parsed = credentialsSchema.safeParse(credentials)
         if (!parsed.success) return null
 
-        const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email },
-        })
-        if (!user) return null
+        const user = await findUserByEmail(parsed.data.email)
+        if (!user?.passwordHash) return null
 
         const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash)
         if (!isValid) return null
@@ -43,24 +47,65 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name ?? user.email,
           role: user.role,
+          aiEnabled: user.aiEnabled,
+          hasPassword: true,
         }
       },
     }),
+    ...(googleProviderConfigured()
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            allowDangerousEmailAccountLinking: true,
+            authorization: { params: { prompt: "select_account" } },
+          }),
+        ]
+      : []),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user?.id) {
+    async signIn({ user, account }) {
+      if (account?.provider !== "google") return true
+      if (!user.email) return false
+      await upsertGoogleUser({ email: user.email, name: user.name })
+      return true
+    },
+    async jwt({ token, user, account }) {
+      if (account?.provider === "google") {
+        const email =
+          typeof user?.email === "string"
+            ? user.email
+            : typeof token.email === "string"
+              ? token.email
+              : null
+        if (email) {
+          const dbUser = await findUserByEmail(email)
+          if (dbUser) token.sub = dbUser.id
+        }
+      } else if (user?.id) {
         token.sub = user.id
-        if ("role" in user && user.role) {
-          token.role = user.role
+      }
+
+      if (token.sub) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true, aiEnabled: true, passwordHash: true },
+        })
+        if (dbUser) {
+          token.role = dbUser.role
+          token.aiEnabled = dbUser.aiEnabled
+          token.hasPassword = Boolean(dbUser.passwordHash)
         }
       }
+
       return token
     },
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.sub
         session.user.role = (token.role as "USER" | "ADMIN") ?? "USER"
+        session.user.aiEnabled = Boolean(token.aiEnabled)
+        session.user.hasPassword = Boolean(token.hasPassword)
       }
       return session
     },
@@ -99,4 +144,22 @@ export async function requireAdmin() {
   const user = await getCurrentUser()
   if (!user || user.role !== "ADMIN") return null
   return user
+}
+
+/** Usuario autenticado con permiso de IA; si no, respuesta HTTP lista para devolver. */
+export async function requireAiAccess() {
+  const user = await getCurrentUser()
+  if (!user) {
+    return { user: null, error: Response.json({ error: "No autenticado" }, { status: 401 }) }
+  }
+  if (!user.aiEnabled) {
+    return {
+      user: null,
+      error: Response.json(
+        { error: "La IA no está habilitada para esta cuenta" },
+        { status: 403 },
+      ),
+    }
+  }
+  return { user, error: null }
 }

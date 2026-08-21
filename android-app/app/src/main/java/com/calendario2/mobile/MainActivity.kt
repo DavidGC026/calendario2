@@ -50,6 +50,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.calendario2.mobile.data.CalendarioApi
 import com.calendario2.mobile.data.EventDto
+import com.calendario2.mobile.data.GoogleLoginBody
+import com.calendario2.mobile.data.GoogleSignInHelper
 import com.calendario2.mobile.data.LoginBody
 import com.calendario2.mobile.data.TokenHolder
 import com.calendario2.mobile.data.TokenStore
@@ -89,6 +91,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             CalendarioTheme {
                 var loggedIn by remember { mutableStateOf(TokenHolder.token != null) }
+                var aiEnabled by remember { mutableStateOf(false) }
                 var events by remember { mutableStateOf<List<EventDto>>(emptyList()) }
                 var loading by remember { mutableStateOf(false) }
                 var error by remember { mutableStateOf<String?>(null) }
@@ -101,6 +104,7 @@ class MainActivity : ComponentActivity() {
                     if (loggedIn) {
                         loading = true
                         try {
+                            aiEnabled = api.me().user.aiEnabled == true
                             events = api.events().events
                         } catch (e: Exception) {
                             error = friendlyError(e)
@@ -148,6 +152,7 @@ class MainActivity : ComponentActivity() {
                         LoginScreen(
                             loading = loading,
                             error = error,
+                            googleEnabled = BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank(),
                             onLogin = { email, pass ->
                                 scope.launch {
                                     loading = true
@@ -156,6 +161,28 @@ class MainActivity : ComponentActivity() {
                                         TokenHolder.token = null
                                         val res = api.login(LoginBody(email, pass))
                                         tokenStore.saveToken(res.token)
+                                        aiEnabled = res.user.aiEnabled == true
+                                        loggedIn = true
+                                        events = api.events().events
+                                        SyncRemindersWorker.enqueue(this@MainActivity)
+                                    } catch (e: Exception) {
+                                        error = friendlyError(e)
+                                    } finally {
+                                        loading = false
+                                    }
+                                }
+                            },
+                            onGoogleLogin = {
+                                scope.launch {
+                                    loading = true
+                                    error = null
+                                    try {
+                                        val helper = GoogleSignInHelper(this@MainActivity)
+                                        val idToken = helper.requestIdToken(BuildConfig.GOOGLE_WEB_CLIENT_ID)
+                                        TokenHolder.token = null
+                                        val res = api.googleLogin(GoogleLoginBody(idToken))
+                                        tokenStore.saveToken(res.token)
+                                        aiEnabled = res.user.aiEnabled == true
                                         loggedIn = true
                                         events = api.events().events
                                         SyncRemindersWorker.enqueue(this@MainActivity)
@@ -175,6 +202,7 @@ class MainActivity : ComponentActivity() {
                             events = events,
                             loading = loading,
                             error = error,
+                            aiEnabled = aiEnabled,
                             initialDate = pendingInitialDate,
                             onInitialDateConsumed = { pendingInitialDate = null },
                             onRefresh = { loadEvents() },
@@ -187,6 +215,7 @@ class MainActivity : ComponentActivity() {
                                     ReminderScheduler.cancelAll(this@MainActivity)
                                     SyncRemindersWorker.cancel(this@MainActivity)
                                     loggedIn = false
+                                    aiEnabled = false
                                     events = emptyList()
                                 }
                             },
@@ -215,6 +244,8 @@ internal fun friendlyError(e: Exception): String {
     return when {
         raw.contains("401") || raw.contains("Credenciales", ignoreCase = true) ->
             "Credenciales incorrectas"
+        raw.contains("cancel", ignoreCase = true) ->
+            "Inicio con Google cancelado"
         raw.contains("Unable to resolve host", ignoreCase = true) ||
             raw.contains("failed to connect", ignoreCase = true) ->
             "Sin conexión con el servidor"
@@ -227,7 +258,9 @@ internal fun friendlyError(e: Exception): String {
 private fun LoginScreen(
     loading: Boolean,
     error: String?,
+    googleEnabled: Boolean,
     onLogin: (String, String) -> Unit,
+    onGoogleLogin: () -> Unit,
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -253,7 +286,7 @@ private fun LoginScreen(
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Recordatorios inteligentes día con día",
-            color = DvgColors.Sky300,
+            color = DvgColors.Rose300,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
         )
@@ -281,6 +314,20 @@ private fun LoginScreen(
                 loading = loading,
                 onClick = { onLogin(email.trim(), password) },
             )
+            if (googleEnabled) {
+                Text(
+                    text = "o",
+                    color = DvgColors.White55,
+                    fontSize = 13.sp,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+                GradientButton(
+                    text = if (loading) "Conectando…" else "Continuar con Google",
+                    enabled = !loading,
+                    loading = false,
+                    onClick = onGoogleLogin,
+                )
+            }
         }
     }
 }
@@ -307,11 +354,11 @@ private fun GlassTextField(
             unfocusedTextColor = DvgColors.White95,
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent,
-            focusedBorderColor = DvgColors.Sky400.copy(alpha = 0.7f),
+            focusedBorderColor = DvgColors.Rose400.copy(alpha = 0.7f),
             unfocusedBorderColor = Color.Transparent,
-            focusedLabelColor = DvgColors.Sky300,
+            focusedLabelColor = DvgColors.Rose300,
             unfocusedLabelColor = DvgColors.White55,
-            cursorColor = DvgColors.Sky400,
+            cursorColor = DvgColors.Blue400,
         ),
     )
 }

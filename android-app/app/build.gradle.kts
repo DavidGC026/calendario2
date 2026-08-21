@@ -18,6 +18,9 @@ android {
         // calendar-db.dvguzman.com es Adminer; la app Next.js está en calendario.dvguzman.com.
         val baseUrl = project.findProperty("CALENDARIO_API_BASE_URL") as String? ?: "https://calendario.dvguzman.com"
         buildConfigField("String", "API_BASE_URL", "\"$baseUrl\"")
+        // Client ID tipo "Web application" de Google Cloud (el mismo que GOOGLE_CLIENT_ID del servidor).
+        val googleWebClientId = project.findProperty("GOOGLE_WEB_CLIENT_ID") as String? ?: ""
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     buildTypes {
@@ -70,6 +73,9 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.9.3")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

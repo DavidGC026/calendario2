@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs"
 import { randomInt } from "node:crypto"
 
+import { findUserByEmail, normalizeEmail } from "@/lib/google-users"
 import { prisma } from "@/lib/prisma"
 import { sendPasswordResetCodeEmail } from "@/lib/email"
 
@@ -33,10 +34,10 @@ function generateNumericCode(): string {
  *   advertencia pero la respuesta al cliente sigue siendo genérica.
  */
 export async function requestPasswordReset(rawEmail: string): Promise<void> {
-  const email = rawEmail.trim().toLowerCase()
+  const email = normalizeEmail(rawEmail)
   if (!email) return
 
-  const user = await prisma.user.findUnique({ where: { email } })
+  const user = await findUserByEmail(email)
   if (!user) {
     return
   }
@@ -92,7 +93,7 @@ export async function confirmPasswordReset(params: {
   code: string
   newPassword: string
 }): Promise<ConfirmResetResult> {
-  const email = params.email.trim().toLowerCase()
+  const email = normalizeEmail(params.email)
   const code = params.code.trim()
   const newPassword = params.newPassword
 
@@ -100,7 +101,7 @@ export async function confirmPasswordReset(params: {
     return { ok: false, reason: "weak_password" }
   }
 
-  const user = await prisma.user.findUnique({ where: { email } })
+  const user = await findUserByEmail(email)
   if (!user) {
     return { ok: false, reason: "invalid_code" }
   }

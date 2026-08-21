@@ -131,7 +131,7 @@ export function AdminNotesManager({ initialNotes }: Props) {
         <button
           type="button"
           onClick={() => (creating ? cancelCreate() : startCreate())}
-          className="inline-flex items-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/20 px-4 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/30 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/20 px-4 py-2.5 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/30 disabled:opacity-50"
           disabled={loading}
         >
           {creating ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -155,7 +155,7 @@ export function AdminNotesManager({ initialNotes }: Props) {
             <input
               value={draftTitle}
               onChange={(e) => setDraftTitle(e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-base text-white outline-none ring-sky-500/40 focus:ring-2"
+              className="mt-1.5 w-full rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-base text-white outline-none ring-rose-500/40 focus:ring-2"
               placeholder="Ej. Despliegue abril 2026"
               maxLength={200}
             />
@@ -166,7 +166,7 @@ export function AdminNotesManager({ initialNotes }: Props) {
               value={draftBody}
               onChange={(e) => setDraftBody(e.target.value)}
               rows={12}
-              className="mt-1.5 w-full resize-y rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 font-mono text-sm text-white outline-none ring-sky-500/40 focus:ring-2"
+              className="mt-1.5 w-full resize-y rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 font-mono text-sm text-white outline-none ring-rose-500/40 focus:ring-2"
               placeholder="# Encabezado&#10;&#10;- lista&#10;- **negrita**"
             />
           </label>
@@ -175,7 +175,7 @@ export function AdminNotesManager({ initialNotes }: Props) {
               type="button"
               onClick={() => void submitCreate()}
               disabled={loading || !draftTitle.trim()}
-              className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-sky-500 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:opacity-95 disabled:opacity-50"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Guardar
@@ -201,7 +201,7 @@ export function AdminNotesManager({ initialNotes }: Props) {
                   <input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="mt-1.5 w-full rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-base text-white outline-none ring-sky-500/40 focus:ring-2"
+                    className="mt-1.5 w-full rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-base text-white outline-none ring-rose-500/40 focus:ring-2"
                     maxLength={200}
                   />
                 </label>
@@ -211,7 +211,7 @@ export function AdminNotesManager({ initialNotes }: Props) {
                     value={editBody}
                     onChange={(e) => setEditBody(e.target.value)}
                     rows={12}
-                    className="mt-1.5 w-full resize-y rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 font-mono text-sm text-white outline-none ring-sky-500/40 focus:ring-2"
+                    className="mt-1.5 w-full resize-y rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 font-mono text-sm text-white outline-none ring-rose-500/40 focus:ring-2"
                   />
                 </label>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -219,7 +219,7 @@ export function AdminNotesManager({ initialNotes }: Props) {
                     type="button"
                     onClick={() => void submitEdit(n.id)}
                     disabled={loading || !editTitle.trim()}
-                    className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-sky-500 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:opacity-95 disabled:opacity-50"
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     Guardar cambios

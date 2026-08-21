@@ -9,7 +9,7 @@ import {
 import { openai } from "@ai-sdk/openai"
 import { z } from "zod"
 
-import { getCurrentUserId } from "@/lib/auth"
+import { requireAiAccess } from "@/lib/auth"
 import {
   calendarLanePromptBlock,
   formatEventLineForContext,
@@ -69,10 +69,9 @@ async function messagesHaveImageParts(messages: UIMessage[]): Promise<boolean> {
 }
 
 export async function POST(req: Request) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return Response.json({ error: "No autenticado" }, { status: 401 })
-  }
+  const { user, error } = await requireAiAccess()
+  if (!user) return error
+  const userId = user.id
 
   // 30 mensajes/min por usuario (incluye reintentos por tool steps).
   const rl = rateLimit(`chat:${userId}`, 30, 60_000)

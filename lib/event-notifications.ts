@@ -21,80 +21,49 @@ function skipEmailWithLog(context: string): boolean {
   return true
 }
 
-/** Ejecutar con await en route handlers / tools para que el envío termine en la misma petición (serverless no corta el trabajo). */
-export async function runNotifyEventCreated(ownerId: string, dto: EventDTO): Promise<void> {
-  publishUserEvent(ownerId, { type: "created", eventId: dto.id })
-  for (const p of dto.participants) {
-    publishUserEvent(p.id, { type: "created", eventId: dto.id })
-  }
-  if (skipEmailWithLog("runNotifyEventCreated")) return
+/**
+ * Avisos de calendario: solo el dueño del evento. No se publican SSE ni se
+ * envían correos a participantes — cada cuenta mantiene su agenda privada.
+ */
+async function notifyOwner(
+  ownerId: string,
+  dto: EventDTO,
+  type: "created" | "updated" | "deleted",
+  send: (owner: { email: string; name: string | null }) => Promise<unknown>,
+  logLabel: string,
+): Promise<void> {
+  publishUserEvent(ownerId, { type, eventId: dto.id })
+  if (skipEmailWithLog(logLabel)) return
   try {
     const owner = await prisma.user.findUnique({
       where: { id: ownerId },
       select: { email: true, name: true },
     })
     if (!owner) return
-    await sendEventCreatedEmail({
-      to: owner.email,
-      event: dto,
-      role: "owner",
-    })
-    for (const p of dto.participants) {
-      await sendEventCreatedEmail({
-        to: p.email,
-        event: dto,
-        role: "participant",
-        organizerName: owner.name,
-      })
-    }
+    await send(owner)
   } catch (e) {
-    console.error("[notifyEventCreated]", e)
+    console.error(`[${logLabel}]`, e)
   }
+}
+
+/** Ejecutar con await en route handlers / tools para que el envío termine en la misma petición (serverless no corta el trabajo). */
+export async function runNotifyEventCreated(ownerId: string, dto: EventDTO): Promise<void> {
+  await notifyOwner(ownerId, dto, "created", (owner) =>
+    sendEventCreatedEmail({ to: owner.email, event: dto, role: "owner" }),
+    "runNotifyEventCreated",
+  )
 }
 
 export async function runNotifyEventUpdated(ownerId: string, dto: EventDTO): Promise<void> {
-  publishUserEvent(ownerId, { type: "updated", eventId: dto.id })
-  for (const p of dto.participants) {
-    publishUserEvent(p.id, { type: "updated", eventId: dto.id })
-  }
-  if (skipEmailWithLog("runNotifyEventUpdated")) return
-  try {
-    const owner = await prisma.user.findUnique({
-      where: { id: ownerId },
-      select: { email: true, name: true },
-    })
-    if (!owner) return
-    await sendEventUpdatedEmail({ to: owner.email, event: dto, role: "owner" })
-    for (const p of dto.participants) {
-      await sendEventUpdatedEmail({ to: p.email, event: dto, role: "participant" })
-    }
-  } catch (e) {
-    console.error("[notifyEventUpdated]", e)
-  }
+  await notifyOwner(ownerId, dto, "updated", (owner) =>
+    sendEventUpdatedEmail({ to: owner.email, event: dto, role: "owner" }),
+    "runNotifyEventUpdated",
+  )
 }
 
 export async function runNotifyEventDeleted(ownerId: string, dto: EventDTO): Promise<void> {
-  publishUserEvent(ownerId, { type: "deleted", eventId: dto.id })
-  for (const p of dto.participants) {
-    publishUserEvent(p.id, { type: "deleted", eventId: dto.id })
-  }
-  if (skipEmailWithLog("runNotifyEventDeleted")) return
-  try {
-    const owner = await prisma.user.findUnique({
-      where: { id: ownerId },
-      select: { email: true, name: true },
-    })
-    if (!owner) return
-    await sendEventDeletedEmail({ to: owner.email, event: dto, role: "owner" })
-    for (const p of dto.participants) {
-      await sendEventDeletedEmail({
-        to: p.email,
-        event: dto,
-        role: "participant",
-        organizerName: owner.name,
-      })
-    }
-  } catch (e) {
-    console.error("[notifyEventDeleted]", e)
-  }
+  await notifyOwner(ownerId, dto, "deleted", (owner) =>
+    sendEventDeletedEmail({ to: owner.email, event: dto, role: "owner" }),
+    "runNotifyEventDeleted",
+  )
 }

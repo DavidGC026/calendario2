@@ -164,14 +164,14 @@ export function CalendarWeekGrid({
             <div
               key={date}
               className={`relative border-l border-white/10 first:border-l-0 ${
-                isToday ? "bg-sky-500/10" : isAnchor ? "bg-white/[0.04]" : ""
+                isToday ? "bg-rose-500/10" : isAnchor ? "bg-white/[0.04]" : ""
               }`}
             >
               <div className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/70 px-1 py-2 text-center backdrop-blur-md">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">{wd}</p>
                 <p
                   className={`text-lg font-semibold tabular-nums tracking-tight ${
-                    isToday ? "text-sky-300" : "text-white/95"
+                    isToday ? "text-rose-300" : "text-white/95"
                   }`}
                 >
                   {Number(dayNum)}

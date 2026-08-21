@@ -60,8 +60,8 @@ private fun NavItem(
     active: Boolean,
     onClick: () -> Unit,
 ) {
-    val tint = if (active) DvgColors.Sky300 else DvgColors.White55
-    val bg = if (active) DvgColors.Sky500.copy(alpha = 0.20f) else Color.Transparent
+    val tint = if (active) DvgColors.Rose300 else DvgColors.White55
+    val bg = if (active) DvgColors.Rose500.copy(alpha = 0.20f) else Color.Transparent
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))

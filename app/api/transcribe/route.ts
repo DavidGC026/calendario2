@@ -1,4 +1,4 @@
-import { getCurrentUserId } from "@/lib/auth"
+import { requireAiAccess } from "@/lib/auth"
 import { rateLimit, rateLimitResponse, clientIp } from "@/lib/rate-limit"
 
 export const maxDuration = 60
@@ -25,10 +25,9 @@ const ALLOWED_TYPES = new Set([
  * para la app móvil.
  */
 export async function POST(req: Request) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return Response.json({ error: "No autenticado" }, { status: 401 })
-  }
+  const { user, error } = await requireAiAccess()
+  if (!user) return error
+  const userId = user.id
 
   if (!process.env.OPENAI_API_KEY) {
     return Response.json({ error: "OPENAI_API_KEY no configurada" }, { status: 503 })

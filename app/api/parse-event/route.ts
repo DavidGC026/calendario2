@@ -2,7 +2,7 @@ import { openai } from "@ai-sdk/openai"
 import { generateText, Output } from "ai"
 import { z } from "zod"
 
-import { getCurrentUserId } from "@/lib/auth"
+import { requireAiAccess } from "@/lib/auth"
 import { calendarLanePromptBlock } from "@/lib/calendar-lanes"
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit"
 
@@ -49,10 +49,9 @@ const outputSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return Response.json({ error: "No autenticado" }, { status: 401 })
-  }
+  const { user, error } = await requireAiAccess()
+  if (!user) return error
+  const userId = user.id
 
   // 20 análisis/min por usuario.
   const rl = rateLimit(`parse:${userId}`, 20, 60_000)

@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 const bodySchema = z.object({
-  currentPassword: z.string().min(1),
+  currentPassword: z.string().optional(),
   newPassword: z.string().min(6),
 })
 
@@ -22,9 +22,15 @@ export async function PATCH(req: Request) {
   }
 
   const { currentPassword, newPassword } = parsed.data
-  const ok = await bcrypt.compare(currentPassword, user.passwordHash)
-  if (!ok) {
-    return Response.json({ error: "Contraseña actual incorrecta" }, { status: 403 })
+
+  if (user.passwordHash) {
+    if (!currentPassword) {
+      return Response.json({ error: "Falta la contraseña actual" }, { status: 400 })
+    }
+    const ok = await bcrypt.compare(currentPassword, user.passwordHash)
+    if (!ok) {
+      return Response.json({ error: "Contraseña actual incorrecta" }, { status: 403 })
+    }
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 10)

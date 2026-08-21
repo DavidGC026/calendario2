@@ -2,7 +2,8 @@ import bcrypt from "bcryptjs"
 import { z } from "zod"
 
 import { signMobileAccessToken } from "@/lib/mobile-jwt"
-import { prisma } from "@/lib/prisma"
+import { findUserByEmail, normalizeEmail } from "@/lib/google-users"
+import { toPublicUser } from "@/lib/user-public"
 
 export const dynamic = "force-dynamic"
 
@@ -19,11 +20,9 @@ export async function POST(req: Request) {
     return Response.json({ error: "Correo o contraseña inválidos" }, { status: 400 })
   }
 
-  const email = parsed.data.email.trim()
-  const user = await prisma.user.findUnique({
-    where: { email },
-  })
-  if (!user) {
+  const email = normalizeEmail(parsed.data.email)
+  const user = await findUserByEmail(email)
+  if (!user?.passwordHash) {
     return Response.json({ error: "Credenciales incorrectas" }, { status: 401 })
   }
 
@@ -37,11 +36,6 @@ export async function POST(req: Request) {
   return Response.json({
     token,
     expiresIn: 60 * 24 * 60 * 60,
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name ?? user.email,
-      role: user.role,
-    },
+    user: toPublicUser(user),
   })
 }

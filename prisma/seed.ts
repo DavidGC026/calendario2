@@ -3,21 +3,9 @@ import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
 async function main() {
-  const adminEmail = "davidguzmanc@dvguzman.com"
-  const adminHash = await bcrypt.hash("calendario123", 10)
-  await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: {
-      role: "ADMIN",
-      passwordHash: adminHash,
-      name: "David Guzmán",
-    },
-    create: {
-      email: adminEmail,
-      passwordHash: adminHash,
-      name: "David Guzmán",
-      role: "ADMIN",
-    },
+  await prisma.user.updateMany({
+    where: { email: "davidguzmanc026@gmail.com" },
+    data: { role: "ADMIN", aiEnabled: true },
   })
 
   const email = "demo@calendar.local"

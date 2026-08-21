@@ -16,6 +16,9 @@ interface CalendarioApi {
     @POST("api/mobile/login")
     suspend fun login(@Body body: LoginBody): LoginResponse
 
+    @POST("api/mobile/google")
+    suspend fun googleLogin(@Body body: GoogleLoginBody): LoginResponse
+
     @GET("api/mobile/me")
     suspend fun me(): MeResponse
 

@@ -45,11 +45,11 @@ export function MobileBottomNav({
                 aria-current={active ? "page" : undefined}
                 className={`flex w-full items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition-colors md:gap-1.5 md:px-3 md:text-sm flex-col md:flex-row ${
                   active
-                    ? "bg-sky-500/20 text-sky-200"
+                    ? "bg-rose-500/20 text-rose-200"
                     : "text-white/55 hover:text-white/85"
                 }`}
               >
-                <Icon className={`h-5 w-5 md:h-4 md:w-4 ${active ? "text-sky-300" : ""}`} />
+                <Icon className={`h-5 w-5 md:h-4 md:w-4 ${active ? "text-rose-300" : ""}`} />
                 <span>{label}</span>
               </button>
             </li>

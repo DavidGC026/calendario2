@@ -92,6 +92,7 @@ fun CalendarScreen(
     events: List<EventDto>,
     loading: Boolean,
     error: String?,
+    aiEnabled: Boolean,
     initialDate: LocalDate? = null,
     onInitialDateConsumed: () -> Unit = {},
     onRefresh: () -> Unit,
@@ -249,7 +250,7 @@ fun CalendarScreen(
 
         if (loading && events.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(top = 40.dp), contentAlignment = Alignment.TopCenter) {
-                CircularProgressIndicator(color = DvgColors.Sky400)
+                CircularProgressIndicator(color = DvgColors.Rose400)
             }
         } else {
             error?.let {
@@ -318,11 +319,13 @@ fun CalendarScreen(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            FabSecondary(
-                icon = Icons.Default.AutoAwesome,
-                description = "Asistente IA",
-                onClick = { aiOpen = true },
-            )
+            if (aiEnabled) {
+                FabSecondary(
+                    icon = Icons.Default.AutoAwesome,
+                    description = "Asistente IA",
+                    onClick = { aiOpen = true },
+                )
+            }
             FabPrimary(
                 icon = Icons.Default.Add,
                 description = "Crear evento",
@@ -429,7 +432,7 @@ fun CalendarScreen(
     }
 
     // Chat IA
-    if (aiOpen) {
+    if (aiEnabled && aiOpen) {
         ChatSheet(
             messages = chatMessages,
             sending = chatSending,
@@ -641,7 +644,7 @@ private fun Header(
         Spacer(Modifier.size(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text("DVGCalendar", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Text(title, color = DvgColors.Sky300, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = DvgColors.Rose300, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
         IconButton(onClick = onPrev) { Icon(Icons.Default.ChevronLeft, contentDescription = "Anterior", tint = DvgColors.White80) }
         IconButton(onClick = onNext) { Icon(Icons.Default.ChevronRight, contentDescription = "Siguiente", tint = DvgColors.White80) }
@@ -661,12 +664,12 @@ private fun Header(
                 )
                 DropdownMenuItem(
                     text = { Text("Sincronizar recordatorios", color = DvgColors.White88) },
-                    leadingIcon = { Icon(Icons.Default.NotificationsActive, null, tint = DvgColors.Sky400) },
+                    leadingIcon = { Icon(Icons.Default.NotificationsActive, null, tint = DvgColors.Blue400) },
                     onClick = onSyncReminders,
                 )
                 DropdownMenuItem(
                     text = { Text("Probar notificación", color = DvgColors.White88) },
-                    leadingIcon = { Icon(Icons.Default.Bolt, null, tint = DvgColors.Violet400) },
+                    leadingIcon = { Icon(Icons.Default.Bolt, null, tint = DvgColors.Rose400) },
                     onClick = onTestNotification,
                 )
                 if (onGrantExactAlarms != null) {
@@ -678,7 +681,7 @@ private fun Header(
                 }
                 DropdownMenuItem(
                     text = { Text("Cambiar fondo…", color = DvgColors.White88) },
-                    leadingIcon = { Icon(Icons.Default.PhotoLibrary, null, tint = DvgColors.Violet400) },
+                    leadingIcon = { Icon(Icons.Default.PhotoLibrary, null, tint = DvgColors.Rose400) },
                     onClick = onChangeBackground,
                 )
                 DropdownMenuItem(
@@ -706,7 +709,7 @@ private fun FabPrimary(
         modifier = Modifier
             .size(56.dp)
             .clip(CircleShape)
-            .background(DvgColors.Sky500)
+            .background(DvgColors.Blue600)
             .border(2.dp, Color.White.copy(alpha = 0.25f), CircleShape)
             .clickable { onClick() },
         contentAlignment = Alignment.Center,

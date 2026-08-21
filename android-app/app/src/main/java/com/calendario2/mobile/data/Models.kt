@@ -18,6 +18,12 @@ data class UserDto(
     val email: String,
     val name: String?,
     val role: String?,
+    val aiEnabled: Boolean? = false,
+    val hasPassword: Boolean? = true,
+)
+
+data class GoogleLoginBody(
+    val idToken: String,
 )
 
 data class MeResponse(

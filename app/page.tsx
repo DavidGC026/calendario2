@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import Image from "next/image"
 import Link from "next/link"
 import {
   DefaultChatTransport,
@@ -27,6 +26,7 @@ import {
   Search,
   Send,
   Settings,
+  Shield,
   Smartphone,
   Sparkles,
   Trash2,
@@ -46,6 +46,8 @@ import { CalendarWeekGrid } from "@/components/calendar-week-grid"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { CalendarFeedCard } from "@/components/calendar-feed-card"
 import { ContactsManager } from "@/components/contacts-manager"
+import { AppWallpaper } from "@/components/app-wallpaper"
+import { WallpaperPicker } from "@/components/wallpaper-picker"
 import { CALENDAR_LANE_COLORS, laneLabel } from "@/lib/calendar-lanes"
 import {
   accentHexForColor,
@@ -57,6 +59,7 @@ import {
   suggestNextFreeSlot,
 } from "@/lib/calendar-view-utils"
 import { useVoiceInput } from "@/lib/use-voice-input"
+import { DEFAULT_WALLPAPER, readStoredWallpaper } from "@/lib/wallpaper"
 
 type CalendarEvent = {
   id: string
@@ -146,6 +149,8 @@ const copy = {
     logout: "Cerrar sesión",
     settings: "Configuración",
     notesPage: "Notas (Markdown)",
+    adminUsersPage: "Usuarios",
+    adminUsersHint: "Roles, acceso a la IA y listado de cuentas.",
     language: "Idioma",
     createEvent: "Crear evento",
     updateEvent: "Actualizar evento",
@@ -233,8 +238,14 @@ const copy = {
     adminEmail: "Correo",
     adminMakeAdmin: "Hacer administrador",
     adminMakeUser: "Quitar administrador",
+    adminAi: "IA",
+    adminEnableAi: "Activar IA",
+    adminDisableAi: "Quitar IA",
     adminLoading: "Cargando usuarios...",
     adminForbidden: "Solo administradores",
+    setPassword: "Definir contraseña",
+    setPasswordHint:
+      "Esta cuenta entra con Google. Puedes definir una contraseña para usarla también en Android.",
     roleAdmin: "Administrador",
     roleUserLabel: "Usuario",
     miniCalendar: "Mini calendario",
@@ -272,6 +283,8 @@ const copy = {
     logout: "Log out",
     settings: "Settings",
     notesPage: "Notes (Markdown)",
+    adminUsersPage: "Users",
+    adminUsersHint: "Roles, AI access, and the account list.",
     language: "Language",
     createEvent: "Create event",
     updateEvent: "Update event",
@@ -359,8 +372,14 @@ const copy = {
     adminEmail: "Email",
     adminMakeAdmin: "Make admin",
     adminMakeUser: "Remove admin",
+    adminAi: "AI",
+    adminEnableAi: "Enable AI",
+    adminDisableAi: "Disable AI",
     adminLoading: "Loading users...",
     adminForbidden: "Admins only",
+    setPassword: "Set a password",
+    setPasswordHint:
+      "This account signs in with Google. You can set a password to use the Android app too.",
     roleAdmin: "Admin",
     roleUserLabel: "User",
     miniCalendar: "Mini calendar",
@@ -469,11 +488,13 @@ const glassPanel =
   "rounded-2xl border border-white/20 bg-gradient-to-br from-white/15 via-white/8 to-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl"
 const glassInset = "rounded-xl border border-white/15 bg-white/5 backdrop-blur-md"
 const inputGlass =
-  "w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-white placeholder:text-white/45 outline-none transition focus:border-violet-400/60 focus:ring-2 focus:ring-violet-500/30"
+  "w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-white placeholder:text-white/45 outline-none transition focus:border-rose-400/60 focus:ring-2 focus:ring-rose-500/30"
 
 export default function HomePage() {
-  const { data: session, status: sessionStatus } = useSession()
+  const { data: session, status: sessionStatus, update: updateSession } = useSession()
   const isAdmin = session?.user?.role === "ADMIN"
+  const canUseAi = Boolean(session?.user?.aiEnabled)
+  const hasPassword = Boolean(session?.user?.hasPassword)
   const [language, setLanguage] = useState<Locale>("es")
   const t = copy[language]
   const today = formatISODateLocal(new Date())
@@ -513,6 +534,7 @@ export default function HomePage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [aiWelcomeDismissed, setAiWelcomeDismissed] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const [wallpaperSrc, setWallpaperSrc] = useState(DEFAULT_WALLPAPER)
 
   const monthFilter = anchorDate.slice(0, 7)
 
@@ -521,11 +543,6 @@ export default function HomePage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [passwordMsg, setPasswordMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null)
   const [savingPassword, setSavingPassword] = useState(false)
-
-  const [adminUsers, setAdminUsers] = useState<
-    { id: string; email: string; name: string | null; role: "USER" | "ADMIN" }[]
-  >([])
-  const [loadingAdmin, setLoadingAdmin] = useState(false)
 
   const [friends, setFriends] = useState<FriendRow[]>([])
   const [incomingRequests, setIncomingRequests] = useState<FriendRequestRow[]>([])
@@ -899,22 +916,9 @@ export default function HomePage() {
     setAiWelcomeDismissed(localStorage.getItem(AI_WELCOME_KEY) === "1")
   }, [])
 
-  async function loadAdminUsers() {
-    if (!isAdmin) return
-    setLoadingAdmin(true)
-    const res = await fetch("/api/admin/users")
-    setLoadingAdmin(false)
-    if (res.ok) {
-      const data = await res.json()
-      setAdminUsers(data.users ?? [])
-    }
-  }
-
   useEffect(() => {
-    if (sessionStatus === "authenticated" && isAdmin) {
-      void loadAdminUsers()
-    }
-  }, [sessionStatus, isAdmin])
+    setWallpaperSrc(readStoredWallpaper(userId))
+  }, [userId])
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault()
@@ -927,7 +931,9 @@ export default function HomePage() {
     const res = await fetch("/api/user/password", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify(
+        hasPassword ? { currentPassword, newPassword } : { newPassword },
+      ),
     })
     const data = await res.json()
     setSavingPassword(false)
@@ -939,18 +945,7 @@ export default function HomePage() {
     setNewPassword("")
     setConfirmPassword("")
     setPasswordMsg({ type: "ok", text: t.passwordSuccess })
-  }
-
-  async function toggleUserRole(userId: string, currentRole: "USER" | "ADMIN") {
-    const next = currentRole === "ADMIN" ? "USER" : "ADMIN"
-    const res = await fetch(`/api/admin/users/${userId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: next }),
-    })
-    if (res.ok) {
-      await loadAdminUsers()
-    }
+    await updateSession()
   }
 
   async function saveEvent(payload: EventPayload, allowConflict = false) {
@@ -992,7 +987,7 @@ export default function HomePage() {
   }
 
   async function handleNaturalInput() {
-    if (!naturalInput.trim()) return
+    if (!canUseAi || !naturalInput.trim()) return
     setParsing(true)
 
     const parseResponse = await fetch("/api/parse-event", {
@@ -1164,9 +1159,9 @@ export default function HomePage() {
   if (sessionStatus === "loading") {
     return (
       <main className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-950/90 via-slate-950 to-blue-950/90" />
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-950/90 via-slate-950 to-blue-950/90" />
         <div className="relative flex min-h-screen items-center justify-center">
-          <Loader2 className="h-10 w-10 animate-spin text-violet-300" />
+          <Loader2 className="h-10 w-10 animate-spin text-rose-300" />
         </div>
       </main>
     )
@@ -1175,23 +1170,14 @@ export default function HomePage() {
   if (sessionStatus === "unauthenticated") {
     return (
       <main className="relative min-h-screen overflow-hidden text-white">
-        <div className="absolute inset-0">
-          <Image
-            src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070&auto=format&fit=crop"
-            alt=""
-            fill
-            className="object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-[2px]" />
-        </div>
+        <AppWallpaper dimmer />
         <div className="relative flex min-h-screen items-center justify-center px-4">
           <div className={`${glassPanel} max-w-md p-8 text-center`}>
-            <Sparkles className="mx-auto mb-3 h-10 w-10 text-violet-300" />
+            <Sparkles className="mx-auto mb-3 h-10 w-10 text-rose-300" />
             <p className="mb-4 text-lg text-white/90">{t.authRequired}</p>
             <a
               href="/login"
-              className="inline-block rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3 font-medium shadow-lg transition hover:opacity-90"
+              className="inline-block rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-6 py-3 font-medium shadow-lg transition hover:opacity-90"
             >
               {t.goToLogin}
             </a>
@@ -1203,17 +1189,7 @@ export default function HomePage() {
 
   return (
     <main className="relative flex min-h-[100dvh] flex-col text-white md:overflow-hidden">
-      <div className="pointer-events-none fixed inset-0 -z-0">
-        <Image
-          src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070&auto=format&fit=crop"
-          alt=""
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/55 to-slate-950/85" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(139,92,246,0.25),transparent)]" />
-      </div>
+      <AppWallpaper src={wallpaperSrc} />
 
       <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col pb-safe md:h-[100dvh] md:min-h-0 md:flex-row md:overflow-hidden md:pb-0">
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
@@ -1392,6 +1368,15 @@ export default function HomePage() {
                     </select>
                   </div>
                   {isAdmin ? (
+                    <>
+                    <Link
+                      href="/admin"
+                      className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2 transition hover:bg-white/[0.08]`}
+                      aria-label={t.adminUsersPage}
+                      title={t.adminUsersPage}
+                    >
+                      <Shield className="h-4 w-4" />
+                    </Link>
                     <Link
                       href="/notas"
                       className={`${glassInset} inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg p-2 transition hover:bg-white/[0.08]`}
@@ -1400,6 +1385,7 @@ export default function HomePage() {
                     >
                       <FileText className="h-4 w-4" />
                     </Link>
+                    </>
                   ) : null}
                   <button
                     type="button"
@@ -1410,7 +1396,7 @@ export default function HomePage() {
                     <Settings className="h-4 w-4" />
                   </button>
                   <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-sky-500 text-sm font-bold text-white ring-2 ring-white/25"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-blue-500 text-sm font-bold text-white ring-2 ring-white/25"
                     title={session?.user?.email ?? ""}
                   >
                     {(session?.user?.email?.[0] ?? "U").toUpperCase()}
@@ -1423,7 +1409,7 @@ export default function HomePage() {
           <div className="flex min-h-0 flex-1 flex-col px-safe pb-[calc(env(safe-area-inset-bottom)+96px)] pt-3 md:overflow-hidden md:pb-32 md:pl-6 md:pr-6 md:pt-4">
             {loadingEvents && events.length === 0 ? (
               <div className="flex flex-1 items-center justify-center gap-2 py-24 text-white/60">
-                <Loader2 className="h-8 w-8 animate-spin text-sky-300" />
+                <Loader2 className="h-8 w-8 animate-spin text-rose-300" />
                 {t.loadingEvents}
               </div>
             ) : viewMode === "month" ? (
@@ -1481,7 +1467,7 @@ export default function HomePage() {
                             isSelected
                               ? "border-white/35 bg-slate-900/85 ring-1 ring-white/25"
                               : isTodayCell
-                                ? "border-sky-400/60 bg-slate-900/80 ring-1 ring-sky-400/40"
+                                ? "border-rose-400/60 bg-slate-900/80 ring-1 ring-rose-400/40"
                                 : "border-white/10 bg-slate-900/60 hover:bg-slate-900/80"
                           }`}
                         >
@@ -1489,13 +1475,13 @@ export default function HomePage() {
                             <span
                               className={`flex h-7 min-w-[1.75rem] items-center justify-center rounded-full text-xs font-semibold tabular-nums md:text-sm ${
                                 isTodayCell ? "ring-2 ring-white/80 ring-offset-1 ring-offset-slate-900" : ""
-                              } ${isTodayCell ? "text-sky-300" : "text-white/90"}`}
+                              } ${isTodayCell ? "text-rose-300" : "text-white/90"}`}
                             >
                               {cell.dayNumber}
                             </span>
                           </div>
                           {isSelected ? (
-                            <div className="mt-1 h-0.5 w-full rounded-full bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.6)]" />
+                            <div className="mt-1 h-0.5 w-full rounded-full bg-rose-400 shadow-[0_0_12px_rgba(251,113,133,0.6)]" />
                           ) : (
                             <div className="mt-1 h-0.5 w-full rounded-full bg-transparent" />
                           )}
@@ -1586,9 +1572,20 @@ export default function HomePage() {
           </div>
         </div>
 
-        {!aiWelcomeDismissed ? (
+        {!canUseAi ? (
+          <div className="pointer-events-none fixed z-[60] flex flex-col items-end gap-2 right-[max(1rem,env(safe-area-inset-right))] md:right-8 bottom-[calc(env(safe-area-inset-bottom)+72px)] md:bottom-[88px]">
+            <button
+              type="button"
+              onClick={openCreateBlank}
+              className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xl ring-2 ring-blue-300/40 transition active:scale-95"
+              aria-label={t.sheetCreate}
+            >
+              <Plus className="h-6 w-6" />
+            </button>
+          </div>
+        ) : !aiWelcomeDismissed ? (
           <div className="pointer-events-auto fixed left-4 right-4 z-[60] mx-auto max-w-sm rounded-2xl border border-white/20 bg-slate-950/90 p-4 shadow-[0_12px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl bottom-[calc(env(safe-area-inset-bottom)+76px)] md:bottom-[88px] sm:left-auto sm:right-[max(1.5rem,env(safe-area-inset-right))] sm:mx-0 md:right-8">
-            <Sparkles className="mb-2 h-6 w-6 text-sky-300" />
+            <Sparkles className="mb-2 h-6 w-6 text-rose-300" />
             <p className="font-semibold text-white">{t.aiWelcomeTitle}</p>
             <p className="mt-1 text-sm text-white/70">{t.aiWelcomeBody}</p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -1598,7 +1595,7 @@ export default function HomePage() {
                   dismissAiWelcome()
                   setAiSheetOpen(true)
                 }}
-                className="rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg"
+                className="rounded-xl bg-gradient-to-r from-rose-500 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg"
               >
                 {t.aiWelcomeYes}
               </button>
@@ -1616,7 +1613,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setAiSheetOpen(true)}
-              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-sky-500 text-white shadow-xl ring-2 ring-white/25 transition active:scale-95"
+              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-rose-600 to-blue-500 text-white shadow-xl ring-2 ring-white/25 transition active:scale-95"
               aria-label={t.openChat}
             >
               <Sparkles className="h-5 w-5" />
@@ -1624,7 +1621,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={openCreateBlank}
-              className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-sky-500 text-white shadow-2xl ring-2 ring-sky-300/40 transition active:scale-95"
+              className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xl ring-2 ring-blue-300/40 transition active:scale-95"
               aria-label={t.sheetCreate}
             >
               <Plus className="h-6 w-6" />
@@ -1829,7 +1826,7 @@ export default function HomePage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   disabled={creatingEvent}
-                  className="rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
+                  className="rounded-xl bg-gradient-to-r from-rose-500 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
                   type="submit"
                 >
                   {creatingEvent ? t.saving : editingEventId ? t.updateEvent : t.saveEvent}
@@ -1848,6 +1845,7 @@ export default function HomePage() {
                 ) : null}
               </div>
             </form>
+            {canUseAi ? (
             <div className={`${glassInset} mt-4 p-4`}>
               <h3 className="font-medium text-white/95">{t.naturalTitle}</h3>
               <div className="mt-2 flex gap-2">
@@ -1859,7 +1857,7 @@ export default function HomePage() {
                 />
                 <button
                   type="button"
-                  className="shrink-0 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-3 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
+                  className="shrink-0 rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-3 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
                   onClick={handleNaturalInput}
                   disabled={parsing || !naturalInput.trim()}
                 >
@@ -1867,6 +1865,7 @@ export default function HomePage() {
                 </button>
               </div>
             </div>
+            ) : null}
             {eventConflict.length > 0 && (
               <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-500/10 p-3 text-sm text-amber-50 backdrop-blur-sm">
                 <p className="font-medium">{t.conflictDetected}</p>
@@ -1910,8 +1909,12 @@ export default function HomePage() {
                 ) : null}
               </div>
               <div>
-                <h3 className="font-medium text-white/90">{t.changePassword}</h3>
+                <h3 className="font-medium text-white/90">{hasPassword ? t.changePassword : t.setPassword}</h3>
+                {!hasPassword ? (
+                  <p className="mt-1 text-sm text-white/55">{t.setPasswordHint}</p>
+                ) : null}
                 <form className="mt-3 grid gap-2" onSubmit={handleChangePassword}>
+                  {hasPassword ? (
                   <input
                     type="password"
                     className={inputGlass}
@@ -1921,6 +1924,7 @@ export default function HomePage() {
                     autoComplete="current-password"
                     required
                   />
+                  ) : null}
                   <input
                     type="password"
                     className={inputGlass}
@@ -1944,7 +1948,7 @@ export default function HomePage() {
                   <button
                     type="submit"
                     disabled={savingPassword}
-                    className="w-fit rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
+                    className="w-fit rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
                   >
                     {savingPassword ? "..." : t.savePassword}
                   </button>
@@ -1956,6 +1960,16 @@ export default function HomePage() {
                     {passwordMsg.text}
                   </p>
                 ) : null}
+              </div>
+
+              <div className="border-t border-white/10 pt-4">
+                <WallpaperPicker
+                  userId={userId}
+                  value={wallpaperSrc}
+                  onChange={setWallpaperSrc}
+                  language={language}
+                  inputClassName={inputGlass}
+                />
               </div>
 
               <div className="border-t border-white/10 pt-4">
@@ -1987,7 +2001,7 @@ export default function HomePage() {
 
               <div className="mt-4 border-t border-white/10 pt-4">
                 <h3 className="flex items-center gap-2 font-medium text-white/90">
-                  <Smartphone className="h-4 w-4 text-violet-300" />
+                  <Smartphone className="h-4 w-4 text-rose-300" />
                   {t.androidAppTitle}
                 </h3>
                 <p className="mt-1 text-xs text-white/55">{t.androidAppHint}</p>
@@ -1996,7 +2010,7 @@ export default function HomePage() {
                     <a
                       href={androidApk.url}
                       download="dvgcalendar.apk"
-                      className="inline-flex w-fit items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-sky-600 px-4 py-2 text-sm font-medium shadow-lg transition hover:brightness-110"
+                      className="inline-flex w-fit items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg transition hover:brightness-110"
                     >
                       <Download className="h-4 w-4" />
                       {t.androidAppCta}
@@ -2018,7 +2032,7 @@ export default function HomePage() {
 
               <div className="mt-4 border-t border-white/10 pt-4">
                 <h3 className="flex items-center gap-2 font-medium text-white/90">
-                  <UserPlus className="h-4 w-4 text-sky-300" />
+                  <UserPlus className="h-4 w-4 text-rose-300" />
                   {language === "es" ? "Añadir amigo" : "Add friend"}
                 </h3>
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
@@ -2032,7 +2046,7 @@ export default function HomePage() {
                     type="button"
                     disabled={sendingFriendRequest || !friendIdInput.trim()}
                     onClick={() => void sendFriendRequestAction()}
-                    className="shrink-0 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
+                    className="shrink-0 rounded-xl bg-gradient-to-r from-rose-500 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
                   >
                     {sendingFriendRequest ? "…" : t.sendFriendRequest}
                   </button>
@@ -2116,42 +2130,14 @@ export default function HomePage() {
               {isAdmin ? (
                 <div className="border-t border-white/10 pt-4">
                   <h3 className="font-medium">{t.adminPanel}</h3>
-                  <p className="mt-1 text-sm text-slate-400">{t.adminUsers}</p>
-                  {loadingAdmin ? (
-                    <p className="mt-2 text-sm text-slate-400">{t.adminLoading}</p>
-                  ) : (
-                    <div className="mt-3 overflow-x-auto">
-                      <table className="w-full text-left text-sm">
-                        <thead>
-                          <tr className="border-b border-white/10 text-slate-400">
-                            <th className="py-2 pr-4">{t.adminEmail}</th>
-                            <th className="py-2 pr-4">{t.adminRole}</th>
-                            <th className="py-2">{t.settings}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {adminUsers.map((u) => (
-                            <tr key={u.id} className="border-b border-white/5">
-                              <td className="py-2 pr-4">{u.email}</td>
-                              <td className="py-2 pr-4">
-                                {u.role === "ADMIN" ? t.roleAdmin : t.roleUserLabel}
-                              </td>
-                              <td className="py-2">
-                                <button
-                                  type="button"
-                                  className="rounded-md border border-white/20 px-2 py-1 text-xs hover:bg-white/10"
-                                  onClick={() => toggleUserRole(u.id, u.role)}
-                                  disabled={u.id === session?.user?.id && u.role === "ADMIN"}
-                                >
-                                  {u.role === "ADMIN" ? t.adminMakeUser : t.adminMakeAdmin}
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                  <p className="mt-1 text-sm text-slate-400">{t.adminUsersHint}</p>
+                  <Link
+                    href="/admin"
+                    className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-medium text-white/90 transition hover:bg-white/10"
+                  >
+                    <Shield className="h-4 w-4" />
+                    {t.adminUsersPage}
+                  </Link>
                 </div>
               ) : null}
               <button
@@ -2166,6 +2152,7 @@ export default function HomePage() {
           </SheetContent>
         </Sheet>
 
+        {canUseAi ? (
         <Sheet open={aiSheetOpen} onOpenChange={setAiSheetOpen}>
           <SheetContent
             side="right"
@@ -2241,7 +2228,7 @@ export default function HomePage() {
                               key={pi}
                               className="rounded-lg border border-white/10 bg-white/[0.06] p-2 text-xs"
                             >
-                              <p className="font-medium text-sky-200/90">{toolName}</p>
+                              <p className="font-medium text-rose-200/90">{toolName}</p>
                               {pending ? (
                                 <p className="text-white/50">
                                   {language === "es" ? "Ejecutando…" : "Running…"}
@@ -2361,7 +2348,7 @@ export default function HomePage() {
                 disabled={
                   status === "streaming" || (!chatInput.trim() && pendingChatFiles.length === 0)
                 }
-                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-4 py-2 font-medium shadow-lg disabled:opacity-50"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 font-medium shadow-lg disabled:opacity-50"
               >
                 {status === "streaming" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </button>
@@ -2370,6 +2357,7 @@ export default function HomePage() {
             </div>
           </SheetContent>
         </Sheet>
+        ) : null}
       </div>
 
     </main>

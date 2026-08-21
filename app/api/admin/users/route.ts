@@ -1,5 +1,5 @@
 import { requireAdmin } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { listAdminUsers } from "@/lib/admin-users"
 
 export async function GET() {
   const admin = await requireAdmin()
@@ -7,16 +7,6 @@ export async function GET() {
     return Response.json({ error: "No autorizado" }, { status: 403 })
   }
 
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      createdAt: true,
-    },
-  })
-
+  const users = await listAdminUsers()
   return Response.json({ users })
 }

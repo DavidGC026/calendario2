@@ -1,5 +1,6 @@
 import { getCurrentUserId } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { toPublicUser } from "@/lib/user-public"
 
 export const dynamic = "force-dynamic"
 
@@ -10,13 +11,10 @@ export async function GET() {
     return Response.json({ error: "No autenticado" }, { status: 401 })
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, email: true, name: true, role: true },
-  })
+  const user = await prisma.user.findUnique({ where: { id: userId } })
   if (!user) {
     return Response.json({ error: "Usuario no encontrado" }, { status: 404 })
   }
 
-  return Response.json({ user })
+  return Response.json({ user: toPublicUser(user) })
 }

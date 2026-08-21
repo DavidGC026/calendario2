@@ -3,9 +3,14 @@ import { z } from "zod"
 import { requireAdmin } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
-const patchSchema = z.object({
-  role: z.enum(["USER", "ADMIN"]),
-})
+const patchSchema = z
+  .object({
+    role: z.enum(["USER", "ADMIN"]).optional(),
+    aiEnabled: z.boolean().optional(),
+  })
+  .refine((value) => value.role !== undefined || value.aiEnabled !== undefined, {
+    message: "Nada que actualizar",
+  })
 
 type RouteParams = {
   params: Promise<{ id: string }>
@@ -35,8 +40,11 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
   const updated = await prisma.user.update({
     where: { id },
-    data: { role: parsed.data.role },
-    select: { id: true, email: true, name: true, role: true },
+    data: {
+      ...(parsed.data.role ? { role: parsed.data.role } : {}),
+      ...(parsed.data.aiEnabled !== undefined ? { aiEnabled: parsed.data.aiEnabled } : {}),
+    },
+    select: { id: true, email: true, name: true, role: true, aiEnabled: true },
   })
 
   return Response.json({ user: updated })

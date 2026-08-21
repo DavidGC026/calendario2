@@ -18,7 +18,7 @@ La app **no** habla con PostgreSQL ni con Adminer por HTTPS: habla con la **mism
 Por defecto el proyecto usa `https://calendario.dvguzman.com` como `API_BASE_URL`. **Solo es correcto** si ese dominio hace de proxy a la aplicación Next.js (mismas rutas `/api/...` que en la web). Si tu web está en otro host (por ejemplo solo `https://calendario.dvguzman.com`), cambia el valor por defecto en `app/build.gradle.kts` o pásalo al compilar:
 
 ```bash
-./gradlew :app:assembleDebug -PCALENDARIO_API_BASE_URL=https://tu-dominio-real
+./gradlew :app:assembleDebug -PCALENDARIO_API_BASE_URL=https://tu-dominio-real -PGOOGLE_WEB_CLIENT_ID=tu-client-id-web.apps.googleusercontent.com
 ```
 
 (Sin barra final.)
@@ -33,7 +33,8 @@ Por defecto el proyecto usa `https://calendario.dvguzman.com` como `API_BASE_URL
 
 ## Funciones
 
-- **Login** con el mismo correo y contraseña que en la web.
+- **Login** con el mismo correo y contraseña que en la web, o con Google si compilaste con `GOOGLE_WEB_CLIENT_ID`.
+- El chat de IA solo aparece si un administrador activó la IA para esa cuenta.
 - **Lista de eventos** desde `GET /api/events` (autenticación `Authorization: Bearer <jwt>`).
 - **Recordatorios locales:** al iniciar sesión y al pulsar la campana se programan alarmas con `AlarmManager`:
   - aviso el **día del evento ~8:00** (hora local del teléfono);

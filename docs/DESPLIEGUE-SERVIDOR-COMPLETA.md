@@ -153,6 +153,8 @@ NODE_ENV
 PORT
 NEXTAUTH_URL
 NEXTAUTH_SECRET
+GOOGLE_CLIENT_ID          # OAuth web; callback {NEXTAUTH_URL}/api/auth/callback/google
+GOOGLE_CLIENT_SECRET
 DATABASE_URL              # apunta a host.docker.internal:55433
 OPENAI_API_KEY
 RESEND_API_KEY
@@ -168,6 +170,16 @@ Ejemplo / referencia: `repo/.env.example` en el repo.
 Credenciales de Postgres (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`).
 
 > Cualquier cambio en el código se hace **siempre en el repo de GitHub**; los únicos archivos que se editan directamente en el servidor son los `.env` y, eventualmente, el `Dockerfile.runtime`.
+
+### 4.4. Google OAuth e IA por usuario
+
+1. Crea un cliente OAuth **Aplicación web** en Google Cloud.
+2. Añade la URI de redirección `{NEXTAUTH_URL}/api/auth/callback/google` (en producción, `https://calendario.dvguzman.com/api/auth/callback/google`).
+3. Pon `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en `/opt/calendar-web/.env` y recrea el contenedor.
+4. La IA **no** se activa al registrarse. Un administrador la concede desde Ajustes → Administración → «Activar IA».
+5. Los recordatorios y correos de evento van **solo al dueño** del evento.
+
+Para Android, el botón de Google usa el **mismo** client ID web. Compila con `-PGOOGLE_WEB_CLIENT_ID=...el-client-id-web...` y registra también un cliente OAuth Android (paquete `com.calendario2.mobile` + SHA-1).
 
 ---
 

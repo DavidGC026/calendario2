@@ -148,7 +148,7 @@ fun ChatSheet(
                     }
                     Text(
                         subtitle,
-                        color = if (sending || voiceState != VoiceUiState.Idle) DvgColors.Sky300 else DvgColors.White55,
+                        color = if (sending || voiceState != VoiceUiState.Idle) DvgColors.Rose300 else DvgColors.White55,
                         fontSize = 11.sp,
                     )
                 }
@@ -220,9 +220,9 @@ fun ChatSheet(
                         unfocusedTextColor = DvgColors.White95,
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,
-                        focusedBorderColor = DvgColors.Violet400.copy(alpha = 0.7f),
+                        focusedBorderColor = DvgColors.Rose400.copy(alpha = 0.7f),
                         unfocusedBorderColor = Color.Transparent,
-                        cursorColor = DvgColors.Violet400,
+                        cursorColor = DvgColors.Rose400,
                     ),
                 )
                 Spacer(Modifier.size(8.dp))
@@ -271,7 +271,7 @@ private fun ToolButton(
         contentAlignment = Alignment.Center,
     ) {
         if (loading) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = DvgColors.Sky300, strokeWidth = 2.dp)
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = DvgColors.Rose300, strokeWidth = 2.dp)
         } else {
             Icon(icon, contentDescription = contentDescription, tint = DvgColors.White95, modifier = Modifier.size(18.dp))
         }
@@ -321,10 +321,10 @@ private fun Bubble(msg: ChatBubble) {
                     if (isUser) RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 14.dp, bottomEnd = 4.dp)
                     else RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 4.dp, bottomEnd = 14.dp)
                 )
-                .background(if (isUser) DvgColors.Sky500.copy(alpha = 0.30f) else DvgColors.White5)
+                .background(if (isUser) DvgColors.Rose500.copy(alpha = 0.30f) else DvgColors.White5)
                 .border(
                     width = 1.dp,
-                    color = if (isUser) DvgColors.Sky400.copy(alpha = 0.4f) else DvgColors.White15,
+                    color = if (isUser) DvgColors.Rose400.copy(alpha = 0.4f) else DvgColors.White15,
                     shape = RoundedCornerShape(14.dp),
                 )
                 .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -363,7 +363,7 @@ private fun EmptyState() {
         modifier = Modifier.fillMaxWidth().padding(top = 30.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = DvgColors.Sky300, modifier = Modifier.size(36.dp))
+        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = DvgColors.Rose300, modifier = Modifier.size(36.dp))
         Spacer(Modifier.height(8.dp))
         Text("Pídeme algo como:", color = DvgColors.White80, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(6.dp))
