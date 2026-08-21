@@ -200,3 +200,22 @@ model AppSetting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+/**
+ * Auditoría de intentos de login (web NextAuth y API móvil).
+ */
+model AuthLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  channel   String
+  email     String?
+  ip        String?
+  userAgent String?
+  success   Boolean
+  reason    String
+  detail    String?
+
+  @@index([createdAt])
+  @@index([email])
+  @@index([success])
+}

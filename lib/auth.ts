@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth/next"
 import { headers } from "next/headers"
 import { z } from "zod"
 
+import { logAuthAttempt } from "@/lib/auth-log"
 import { findUserByEmail, upsertGoogleUser } from "@/lib/google-users"
 import { prisma } from "@/lib/prisma"
 import { verifyMobileAccessToken } from "@/lib/mobile-jwt"
@@ -19,9 +20,53 @@ function googleProviderConfigured(): boolean {
   return Boolean(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim())
 }
 
+async function getAuthRequestMeta() {
+  try {
+    const h = await headers()
+    const forwarded = h.get("x-forwarded-for")
+    const ip = forwarded?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? null
+    const userAgent = h.get("user-agent")
+    return { ip, userAgent }
+  } catch {
+    return { ip: null, userAgent: null }
+  }
+}
+
+const secureCookies = process.env.NEXTAUTH_URL?.startsWith("https://") ?? true
+
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET ?? "dev-only-secret-change-in-production",
   session: { strategy: "jwt" },
+  useSecureCookies: secureCookies,
+  cookies: {
+    csrfToken: {
+      name: secureCookies ? "__Secure-next-auth.csrf-token" : "next-auth.csrf-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: secureCookies,
+      },
+    },
+    sessionToken: {
+      name: secureCookies ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: secureCookies,
+      },
+    },
+    callbackUrl: {
+      name: secureCookies ? "__Secure-next-auth.callback-url" : "next-auth.callback-url",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: secureCookies,
+      },
+    },
+  },
   pages: {
     signIn: "/login",
   },
@@ -33,14 +78,60 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const parsed = credentialsSchema.safeParse(credentials)
-        if (!parsed.success) return null
+        const meta = await getAuthRequestMeta()
+        const rawEmail = credentials?.email?.trim().toLowerCase() ?? null
+
+        const parsed = credentialsSchema.safeParse({
+          email: rawEmail,
+          password: credentials?.password,
+        })
+        if (!parsed.success) {
+          await logAuthAttempt({
+            channel: "web",
+            email: rawEmail,
+            ip: meta.ip,
+            userAgent: meta.userAgent,
+            success: false,
+            reason: "validation_failed",
+            detail: parsed.error.issues.map((i) => i.message).join("; "),
+          })
+          return null
+        }
 
         const user = await findUserByEmail(parsed.data.email)
-        if (!user?.passwordHash) return null
+        if (!user?.passwordHash) {
+          await logAuthAttempt({
+            channel: "web",
+            email: parsed.data.email,
+            ip: meta.ip,
+            userAgent: meta.userAgent,
+            success: false,
+            reason: user ? "bad_password" : "user_not_found",
+          })
+          return null
+        }
 
         const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash)
-        if (!isValid) return null
+        if (!isValid) {
+          await logAuthAttempt({
+            channel: "web",
+            email: parsed.data.email,
+            ip: meta.ip,
+            userAgent: meta.userAgent,
+            success: false,
+            reason: "bad_password",
+          })
+          return null
+        }
+
+        await logAuthAttempt({
+          channel: "web",
+          email: parsed.data.email,
+          ip: meta.ip,
+          userAgent: meta.userAgent,
+          success: true,
+          reason: "success",
+        })
 
         return {
           id: user.id,

@@ -7,6 +7,19 @@ import { signIn } from "next-auth/react"
 import { GoogleAuthSection } from "@/components/google-auth-section"
 import { AppWallpaper } from "@/components/app-wallpaper"
 
+function describeSignInResult(result: { error?: string | null; url?: string | null; ok?: boolean }) {
+  if (result.url?.includes("csrf=true")) {
+    return "Error de sesión (CSRF). Recarga la página con Ctrl+F5 e inténtalo otra vez."
+  }
+  if (result.error === "CredentialsSignin" || result.url?.includes("error=CredentialsSignin")) {
+    return "Credenciales inválidas"
+  }
+  if (result.error) {
+    return `Error de autenticación: ${result.error}`
+  }
+  return null
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -19,15 +32,26 @@ export default function LoginPage() {
     setLoading(true)
 
     const result = await signIn("credentials", {
-      email,
+      email: email.trim(),
       password,
       redirect: false,
     })
 
+    void fetch("/api/auth/login-attempt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email.trim(),
+        ok: result?.ok ?? false,
+        error: result?.error ?? null,
+        url: result?.url ?? null,
+      }),
+    })
+
     setLoading(false)
 
-    if (result?.error) {
-      setError("Credenciales inválidas")
+    if (!result?.ok) {
+      setError(describeSignInResult(result ?? {}) ?? "No se pudo iniciar sesión")
       return
     }
 
