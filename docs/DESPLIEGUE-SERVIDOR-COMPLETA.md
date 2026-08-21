@@ -178,6 +178,7 @@ Credenciales de Postgres (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`).
 3. Pon `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en `/opt/calendar-web/.env` y recrea el contenedor.
 4. La IA **no** se activa al registrarse. Un administrador la concede desde Ajustes → Administración → «Activar IA».
 5. Los recordatorios y correos de evento van **solo al dueño** del evento.
+6. La clave de OpenAI se puede cambiar en `/admin` (sección «Clave de OpenAI»). Queda cifrada en Postgres y pisa a `OPENAI_API_KEY` del `.env` hasta que pulses «Usar la del .env». El panel nunca muestra la clave entera; al guardar se comprueba contra `api.openai.com`.
 
 Para Android, el botón de Google usa el **mismo** client ID web. Compila con `-PGOOGLE_WEB_CLIENT_ID=...el-client-id-web...` y registra también un cliente OAuth Android (paquete `com.calendario2.mobile` + SHA-1).
 

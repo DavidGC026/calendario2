@@ -2,15 +2,17 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ArrowLeft, FileText, Shield } from "lucide-react"
 
+import { AdminOpenAiKeyPanel } from "@/components/admin-openai-key-panel"
 import { AdminUsersPanel } from "@/components/admin-users-panel"
 import { getCurrentUser } from "@/lib/auth"
 import { listAdminUsers } from "@/lib/admin-users"
+import { getOpenAiKeyPublicStatus } from "@/lib/openai-settings"
 
 export const dynamic = "force-dynamic"
 
 export const metadata = {
   title: "Usuarios (admin) | Calendario inteligente",
-  description: "Roles e IA por cuenta — solo administradores",
+  description: "Usuarios, IA y clave de OpenAI — solo administradores",
 }
 
 export default async function AdminUsersPage() {
@@ -23,6 +25,7 @@ export default async function AdminUsersPage() {
   }
 
   const users = await listAdminUsers()
+  const openaiStatus = await getOpenAiKeyPublicStatus()
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
@@ -59,7 +62,10 @@ export default async function AdminUsersPage() {
           </div>
         </div>
 
-        <AdminUsersPanel initialUsers={users} currentUserId={user.id} />
+        <div className="space-y-8">
+          <AdminOpenAiKeyPanel initial={openaiStatus} />
+          <AdminUsersPanel initialUsers={users} currentUserId={user.id} />
+        </div>
       </div>
     </main>
   )

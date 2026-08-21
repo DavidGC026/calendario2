@@ -6,7 +6,6 @@ import {
   UIMessage,
   tool,
 } from "ai"
-import { openai } from "@ai-sdk/openai"
 import { z } from "zod"
 
 import { requireAiAccess } from "@/lib/auth"
@@ -41,6 +40,7 @@ import {
   runNotifyEventUpdated,
 } from "@/lib/event-notifications"
 import { listFriends, searchFriendsByHint } from "@/lib/friends"
+import { getOpenAiProvider } from "@/lib/openai-settings"
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit"
 
 function toolErr(err: unknown) {
@@ -135,6 +135,10 @@ export async function POST(req: Request) {
     : `\n\nLa fecha de hoy es ${todayIso} (${todayReadable}). Para las tools usa siempre eventDate en formato YYYY-MM-DD. Si el usuario indica solo día y mes sin año, elige el año coherente con lo que pide respecto a hoy (por ejemplo el año actual si aún no pasó esa fecha este año, o el "próximo" 27 de abril que corresponda).`
 
   const hasImages = await messagesHaveImageParts(messages)
+  const openai = await getOpenAiProvider()
+  if (!openai) {
+    return Response.json({ error: "OPENAI_API_KEY no configurada" }, { status: 503 })
+  }
   const model = openai(hasImages ? "gpt-4o" : "gpt-4o-mini")
 
   const multimodalHint = isEnglish

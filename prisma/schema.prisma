@@ -190,3 +190,13 @@ model Contact {
   @@unique([userId, normalizedName])
   @@index([userId])
 }
+
+/**
+ * Ajustes globales de la instancia (una fila por clave).
+ * `openai_api_key` guarda la clave cifrada; si no hay fila, se usa OPENAI_API_KEY del entorno.
+ */
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

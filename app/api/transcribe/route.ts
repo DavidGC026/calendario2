@@ -1,4 +1,5 @@
 import { requireAiAccess } from "@/lib/auth"
+import { getOpenAiApiKey } from "@/lib/openai-settings"
 import { rateLimit, rateLimitResponse, clientIp } from "@/lib/rate-limit"
 
 export const maxDuration = 60
@@ -29,7 +30,8 @@ export async function POST(req: Request) {
   if (!user) return error
   const userId = user.id
 
-  if (!process.env.OPENAI_API_KEY) {
+  const openaiKey = await getOpenAiApiKey()
+  if (!openaiKey) {
     return Response.json({ error: "OPENAI_API_KEY no configurada" }, { status: 503 })
   }
 
@@ -78,7 +80,7 @@ export async function POST(req: Request) {
   try {
     res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+      headers: { Authorization: `Bearer ${openaiKey}` },
       body: upstream,
     })
   } catch (err) {

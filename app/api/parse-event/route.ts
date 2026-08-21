@@ -1,9 +1,9 @@
-import { openai } from "@ai-sdk/openai"
 import { generateText, Output } from "ai"
 import { z } from "zod"
 
 import { requireAiAccess } from "@/lib/auth"
 import { calendarLanePromptBlock } from "@/lib/calendar-lanes"
+import { getOpenAiProvider } from "@/lib/openai-settings"
 import { rateLimit, rateLimitResponse } from "@/lib/rate-limit"
 
 /**
@@ -75,6 +75,11 @@ export async function POST(req: Request) {
   const cached = cacheGet(cacheKey)
   if (cached !== undefined) {
     return Response.json(cached, { headers: { "X-Cache": "HIT" } })
+  }
+
+  const openai = await getOpenAiProvider()
+  if (!openai) {
+    return Response.json({ error: "OPENAI_API_KEY no configurada" }, { status: 503 })
   }
 
   const result = await generateText({
