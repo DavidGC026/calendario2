@@ -307,6 +307,20 @@ export async function deleteEventForUser(userId: string, eventId: string): Promi
   if (!existing) return null
 
   const dto = await toEventDTO(existing)
+
+  // Si el evento vivía también en Google, se deja una lápida antes de borrarlo:
+  // al desaparecer la fila se va con ella el `googleEventId`, y sin él nadie
+  // sabría qué hay que borrar allá. Llamar a Google aquí mismo tampoco bastaría
+  // —si la petición falla, el evento se queda vivo en Google para siempre—, así
+  // que lo recoge la siguiente pasada del cron.
+  if (existing.googleEventId) {
+    await prisma.googleDeletion.upsert({
+      where: { userId_googleEventId: { userId, googleEventId: existing.googleEventId } },
+      update: {},
+      create: { userId, googleEventId: existing.googleEventId },
+    })
+  }
+
   await prisma.event.delete({ where: { id: eventId } })
   return dto
 }

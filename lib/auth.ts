@@ -9,6 +9,7 @@ import { z } from "zod"
 import { logAuthAttempt } from "@/lib/auth-log"
 import { findUserByEmail, upsertGoogleUser } from "@/lib/google-users"
 import { prisma } from "@/lib/prisma"
+import { looksLikeApiKey, resolveApiKey } from "@/lib/api-keys"
 import { verifyMobileAccessToken } from "@/lib/mobile-jwt"
 
 const credentialsSchema = z.object({
@@ -207,13 +208,31 @@ export async function getCurrentSession() {
   return getServerSession(authOptions)
 }
 
-export async function getCurrentUserId() {
+/**
+ * Quién está pidiendo esto: por llave de API, por JWT de la app móvil o por
+ * sesión web, en ese orden.
+ *
+ * `allowApiKey` existe por una razón concreta: una llave de API NO debe poder
+ * crear más llaves, revocar las que hay ni conectar cuentas de Google. Si
+ * pudiera, una llave filtrada se multiplicaría sola y revocarla no serviría de
+ * nada, porque ya habría hecho otras. Esas rutas piden sesión de verdad —la web
+ * o el teléfono, donde hay una contraseña detrás—.
+ */
+export async function getCurrentUserId({ allowApiKey = true }: { allowApiKey?: boolean } = {}) {
   try {
     const h = await headers()
     const auth = h.get("authorization")
-    if (auth?.toLowerCase().startsWith("bearer ")) {
-      const raw = auth.slice(7).trim()
-      if (raw) {
+    const bearer = auth?.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : ""
+    // `x-api-key` además de `Authorization`, porque es lo que espera cualquiera
+    // que haya integrado una API antes y ahorra una vuelta de documentación.
+    const raw = bearer || h.get("x-api-key")?.trim() || ""
+
+    if (raw) {
+      if (looksLikeApiKey(raw)) {
+        if (!allowApiKey) return undefined
+        const id = await resolveApiKey(raw)
+        if (id) return id
+      } else {
         const id = await verifyMobileAccessToken(raw)
         if (id) return id
       }

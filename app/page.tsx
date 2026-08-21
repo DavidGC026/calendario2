@@ -45,6 +45,8 @@ import { CalendarSidebarContent, type CalendarCell } from "@/components/calendar
 import { CalendarWeekGrid } from "@/components/calendar-week-grid"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { CalendarFeedCard } from "@/components/calendar-feed-card"
+import { GoogleCalendarCard } from "@/components/google-calendar-card"
+import { ApiKeysCard } from "@/components/api-keys-card"
 import { ContactsManager } from "@/components/contacts-manager"
 import { AppWallpaper } from "@/components/app-wallpaper"
 import { WallpaperPicker } from "@/components/wallpaper-picker"
@@ -2125,7 +2127,11 @@ export default function HomePage() {
 
               <ContactsManager language={language} inputClassName={inputGlass} />
 
+              <GoogleCalendarCard language={language} />
+
               <CalendarFeedCard language={language} />
+
+              <ApiKeysCard language={language} inputClassName={inputGlass} />
 
               {isAdmin ? (
                 <div className="border-t border-white/10 pt-4">
