@@ -29,7 +29,13 @@ fun Modifier.glassPanel(radius: Dp = 18.dp): Modifier =
                 ),
             ),
         )
-        .border(BorderStroke(1.dp, DvgColors.White15), RoundedCornerShape(radius))
+        .border(BorderStroke(1.dp, DvgColors.Gold400.copy(alpha = 0.20f)), RoundedCornerShape(radius))
+
+/** Cristal más oscuro para mantener legibles los formularios sobre fotografía. */
+fun Modifier.authGlassPanel(radius: Dp = 20.dp): Modifier =
+    this.clip(RoundedCornerShape(radius))
+        .background(DvgColors.Slate950.copy(alpha = 0.80f))
+        .border(BorderStroke(1.dp, DvgColors.Gold400.copy(alpha = 0.24f)), RoundedCornerShape(radius))
 
 /**
  * `glassInset` de la web: tarjetas pequeñas / inputs / chips.
@@ -37,12 +43,12 @@ fun Modifier.glassPanel(radius: Dp = 18.dp): Modifier =
 fun Modifier.glassInset(radius: Dp = 12.dp): Modifier =
     this.clip(RoundedCornerShape(radius))
         .background(DvgColors.White5)
-        .border(BorderStroke(1.dp, DvgColors.White15), RoundedCornerShape(radius))
+        .border(BorderStroke(1.dp, DvgColors.Gold400.copy(alpha = 0.15f)), RoundedCornerShape(radius))
 
 /**
  * Botón primario carmín → dorado (igual que los CTA de la web).
  */
 @Composable
 fun primaryGradient(): Brush = Brush.linearGradient(
-    colors = listOf(DvgColors.Rose600, DvgColors.Gold600),
+    colors = listOf(DvgColors.BrandRed, DvgColors.Gold600),
 )

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,16 +42,16 @@ fun BottomNavBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(DvgColors.Slate950.copy(alpha = 0.92f))
-            .border(width = 0.5.dp, color = DvgColors.White10)
+            .background(DvgColors.Slate950.copy(alpha = 0.88f))
+            .border(width = 0.5.dp, color = DvgColors.Gold400.copy(alpha = 0.18f))
             .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        NavItem("Día", Icons.Default.CalendarToday, mode == CalendarMode.Day) { onSelectMode(CalendarMode.Day) }
-        NavItem("Semana", Icons.Default.CalendarViewWeek, mode == CalendarMode.Week) { onSelectMode(CalendarMode.Week) }
-        NavItem("Mes", Icons.Default.CalendarMonth, mode == CalendarMode.Month) { onSelectMode(CalendarMode.Month) }
-        NavItem("Hoy", Icons.Default.MyLocation, false, onClick = onGoToday)
+        NavItem("Día", Icons.Default.CalendarToday, mode == CalendarMode.Day, Modifier.weight(1f)) { onSelectMode(CalendarMode.Day) }
+        NavItem("Semana", Icons.Default.CalendarViewWeek, mode == CalendarMode.Week, Modifier.weight(1f)) { onSelectMode(CalendarMode.Week) }
+        NavItem("Mes", Icons.Default.CalendarMonth, mode == CalendarMode.Month, Modifier.weight(1f)) { onSelectMode(CalendarMode.Month) }
+        NavItem("Hoy", Icons.Default.MyLocation, false, Modifier.weight(1f), onClick = onGoToday)
     }
 }
 
@@ -58,16 +60,19 @@ private fun NavItem(
     label: String,
     icon: ImageVector,
     active: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val tint = if (active) DvgColors.Rose300 else DvgColors.White55
-    val bg = if (active) DvgColors.Rose500.copy(alpha = 0.20f) else Color.Transparent
+    val tint = if (active) DvgColors.Gold400 else DvgColors.White55
+    val bg = if (active) DvgColors.BrandRed.copy(alpha = 0.25f) else Color.Transparent
     Column(
-        modifier = Modifier
+        modifier = modifier
+            .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(bg)
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+            .clickable(role = Role.Tab, onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(20.dp))

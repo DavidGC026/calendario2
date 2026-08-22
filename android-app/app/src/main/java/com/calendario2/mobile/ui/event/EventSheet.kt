@@ -217,7 +217,7 @@ fun EventSheet(
                                     )
                                 },
                                 colors = CheckboxDefaults.colors(
-                                    checkedColor = DvgColors.Rose500,
+                                    checkedColor = DvgColors.BrandRed,
                                     uncheckedColor = DvgColors.White45,
                                 ),
                             )
@@ -322,11 +322,11 @@ private fun GlassField(
             unfocusedTextColor = DvgColors.White95,
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent,
-            focusedBorderColor = DvgColors.Rose400.copy(alpha = 0.7f),
+            focusedBorderColor = DvgColors.Gold400.copy(alpha = 0.7f),
             unfocusedBorderColor = Color.Transparent,
-            focusedLabelColor = DvgColors.Rose300,
+            focusedLabelColor = DvgColors.Gold400,
             unfocusedLabelColor = DvgColors.White55,
-            cursorColor = DvgColors.Rose400,
+            cursorColor = DvgColors.Gold400,
         ),
     )
 }
@@ -449,10 +449,10 @@ private fun ReminderChips(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (active) DvgColors.Rose500.copy(alpha = 0.3f) else DvgColors.White5)
+                    .background(if (active) DvgColors.BrandRed.copy(alpha = 0.3f) else DvgColors.White5)
                     .border(
                         width = 1.dp,
-                        color = if (active) DvgColors.Rose400 else DvgColors.White15,
+                        color = if (active) DvgColors.Gold400 else DvgColors.White15,
                         shape = RoundedCornerShape(10.dp),
                     )
                     .clickable(enabled = enabled) { onSelect(value) }
@@ -476,10 +476,10 @@ private fun ReminderChips(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (active) DvgColors.Rose500.copy(alpha = 0.3f) else DvgColors.White5)
+                    .background(if (active) DvgColors.BrandRed.copy(alpha = 0.3f) else DvgColors.White5)
                     .border(
                         width = 1.dp,
-                        color = if (active) DvgColors.Rose400 else DvgColors.White15,
+                        color = if (active) DvgColors.Gold400 else DvgColors.White15,
                         shape = RoundedCornerShape(10.dp),
                     )
                     .clickable(enabled = enabled) { onSelect(value) }

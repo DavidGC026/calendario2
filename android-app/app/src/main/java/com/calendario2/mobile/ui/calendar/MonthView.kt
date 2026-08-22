@@ -68,7 +68,7 @@ fun MonthAgendaView(
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(18.dp))
-            .background(Color(0x99020617))
+            .background(DvgColors.Slate950.copy(alpha = 0.60f))
             .border(1.dp, DvgColors.White15, RoundedCornerShape(18.dp))
             .padding(10.dp),
     ) {
@@ -117,7 +117,7 @@ fun MonthAgendaView(
                 .weight(1f)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(Color(0x66020617))
+                .background(DvgColors.Slate950.copy(alpha = 0.40f))
                 .border(1.dp, DvgColors.White10, RoundedCornerShape(14.dp))
                 .padding(horizontal = 10.dp, vertical = 8.dp),
         ) {
@@ -237,7 +237,7 @@ private fun MonthCellGoogle(
             .border(1.dp, DvgColors.White35, RoundedCornerShape(10.dp))
         isToday -> Modifier
             .background(DvgColors.Slate900.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
-            .border(1.dp, DvgColors.Rose400.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
+            .border(1.dp, DvgColors.Gold400.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
         inMonth -> Modifier
             .background(DvgColors.Slate900.copy(alpha = 0.55f), RoundedCornerShape(10.dp))
             .border(1.dp, DvgColors.White10, RoundedCornerShape(10.dp))
@@ -268,7 +268,7 @@ private fun MonthCellGoogle(
             Text(
                 text = date.dayOfMonth.toString(),
                 color = when {
-                    isToday -> DvgColors.Rose300
+                    isToday -> DvgColors.Gold400
                     !inMonth -> DvgColors.White35
                     else -> DvgColors.White88
                 },
@@ -283,7 +283,7 @@ private fun MonthCellGoogle(
                     .fillMaxWidth()
                     .height(2.5.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(DvgColors.Rose400),
+                    .background(DvgColors.BrandRedSoft),
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -317,7 +317,7 @@ fun MonthView(
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(18.dp))
-            .background(Color(0x99020617))
+            .background(DvgColors.Slate950.copy(alpha = 0.60f))
             .border(1.dp, DvgColors.White15, RoundedCornerShape(18.dp))
             .padding(10.dp),
     ) {
@@ -366,11 +366,11 @@ private fun MonthCell(
 ) {
     val border: Modifier = when {
         isSelected -> Modifier
-            .background(DvgColors.Rose500.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-            .border(1.dp, DvgColors.Rose400.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
+            .background(DvgColors.BrandRed.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+            .border(1.dp, DvgColors.Gold400.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
         isToday -> Modifier
             .background(DvgColors.Slate900.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
-            .border(1.dp, DvgColors.Rose400.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+            .border(1.dp, DvgColors.Gold400.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
         inMonth -> Modifier
             .background(DvgColors.Slate900.copy(alpha = 0.65f), RoundedCornerShape(12.dp))
             .border(1.dp, DvgColors.White10, RoundedCornerShape(12.dp))
@@ -391,7 +391,7 @@ private fun MonthCell(
             Text(
                 text = date.dayOfMonth.toString(),
                 color = when {
-                    isToday -> DvgColors.Rose300
+                    isToday -> DvgColors.Gold400
                     !inMonth -> DvgColors.White35
                     else -> DvgColors.White88
                 },

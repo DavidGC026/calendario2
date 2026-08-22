@@ -1,8 +1,38 @@
 import { getCurrentUserId } from "@/lib/auth"
-import { googleConfigured } from "@/lib/google-calendar-api"
+import { CALENDAR_SCOPE, googleConfigured } from "@/lib/google-calendar-api"
+import { redirectUri, signOAuthState } from "@/lib/google-calendar-link"
 import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
+
+/**
+ * La dirección de Google donde se concede el permiso, ya firmada.
+ *
+ * En la web basta con redirigir desde /connect, porque el navegador lleva la
+ * sesión puesta. La app de Android no: guarda un JWT en una cabecera, y una
+ * pestaña del navegador no se lo lleva consigo, así que abrir /connect desde el
+ * teléfono daría un 401.
+ *
+ * Por eso la dirección se entrega aquí, en la misma llamada con la que la app
+ * pregunta cómo va la conexión: la app la pide con su token, la abre en el
+ * navegador y Google vuelve al callback, que se identifica por el `state`
+ * firmado y no necesita ninguna sesión. Una petición en vez de un flujo aparte.
+ */
+async function buildConnectUrl(userId: string): Promise<string | null> {
+  if (!googleConfigured()) return null
+
+  const url = new URL("https://accounts.google.com/o/oauth2/v2/auth")
+  url.searchParams.set("client_id", process.env.GOOGLE_CLIENT_ID ?? "")
+  url.searchParams.set("redirect_uri", redirectUri())
+  url.searchParams.set("response_type", "code")
+  url.searchParams.set("scope", `${CALENDAR_SCOPE} email`)
+  url.searchParams.set("access_type", "offline")
+  url.searchParams.set("prompt", "consent")
+  url.searchParams.set("include_granted_scopes", "true")
+  url.searchParams.set("state", await signOAuthState(userId))
+
+  return url.toString()
+}
 
 /** Cómo va la conexión con Google: para pintar Ajustes y para contar los fallos. */
 export async function GET() {
@@ -13,6 +43,8 @@ export async function GET() {
 
   return Response.json({
     configured: googleConfigured(),
+    // Caduca en diez minutos, así que se pide cuando se va a usar y no se guarda.
+    connectUrl: await buildConnectUrl(userId),
     // Ni el refresh token ni el de acceso salen de aquí, ni siquiera cifrados.
     link: link
       ? {

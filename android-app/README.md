@@ -1,6 +1,6 @@
 # Calendario Android (nativo)
 
-Cliente **Kotlin + Jetpack Compose** alineado con el estilo oscuro de la web (slate + acentos cielo/violeta).
+Cliente **Kotlin + Jetpack Compose** con paridad visual respecto a la web: fotografía cálida, cristal transparente y marca DVG en carmín/dorado sobre carbón neutro.
 
 ## Requisitos
 

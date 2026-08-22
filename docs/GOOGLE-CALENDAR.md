@@ -53,6 +53,55 @@ La vuelta guarda un *refresh token* cifrado (`lib/secret-box.ts`, AES-256-GCM).
 Ese token es la llave de la agenda de una persona durante meses: en claro, una
 copia de la base de datos sería una copia de las agendas de todo el mundo.
 
+## Desde el teléfono
+
+La app de Android no habla con Google ni guarda credenciales suyas: quien
+sincroniza sigue siendo el servidor, cada pocos minutos. Desde el móvil solo se
+conecta la cuenta, se empuja una pasada y —sobre todo— **se ve si funciona**.
+
+### El nudo: un JWT no viaja en una pestaña del navegador
+
+En la web, conectar es redirigir a `/api/google-calendar/connect`, que sabe quién
+eres porque el navegador lleva la cookie de sesión. La app no tiene cookie: lleva
+un JWT en una cabecera. Si abriera `/connect` en el navegador del teléfono,
+llegaría sin identificar y Google no sabría de quién es el permiso.
+
+La salida es un traspaso firmado, y cabe en la llamada que la app ya necesita
+hacer:
+
+1. La app pide `GET /api/google-calendar` **con su Bearer**.
+2. La respuesta trae, además del estado, un `connectUrl`: la dirección de Google
+   ya montada, con un `state` firmado que identifica al usuario durante diez
+   minutos.
+3. La app abre esa dirección **en el navegador del sistema**.
+4. Google vuelve a `/api/google-calendar/callback`, que se identifica por ese
+   `state` y **no necesita ninguna sesión** — ya funcionaba así desde el principio.
+
+No hizo falta un flujo aparte ni una ruta nueva: el `connectUrl` viaja en el
+estado, que es justo lo que la pantalla iba a pedir de todas formas.
+
+### En el navegador, no en un WebView
+
+El permiso se concede en el dominio de Google, con la barra de direcciones a la
+vista. Meterlo en un WebView dentro de la app se ve más integrado y es
+exactamente lo que enseña a la gente a escribir su contraseña de Google en
+cualquier pantalla que se la pida.
+
+### Qué se ve
+
+`ui/google/GoogleCalendarSheet.kt`, desde el menú ⋮ → **Google Calendar**:
+la cuenta conectada, **la última sincronización correcta** y **el último fallo**,
+más conectar, sincronizar ahora y desconectar. Los dos datos del medio son la
+razón de que la pantalla exista: una sincronización rota no se nota —el
+calendario sigue lleno— hasta que falta una cita.
+
+| Qué | Dónde |
+|-----|-------|
+| Estado y `connectUrl` | `app/api/google-calendar/route.ts` |
+| Llamadas de la app | `data/ApiService.kt`, `data/Models.kt` |
+| La hoja | `ui/google/GoogleCalendarSheet.kt` |
+| El enganche | `ui/calendar/CalendarScreen.kt` (menú ⋮) |
+
 ## Las zonas horarias, que es donde esto se rompe
 
 El contenedor de producción corre en **UTC** y `EVENT_TIMEZONE` es

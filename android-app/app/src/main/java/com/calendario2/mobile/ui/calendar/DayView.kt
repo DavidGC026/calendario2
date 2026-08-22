@@ -63,7 +63,7 @@ fun DayView(
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(18.dp))
-            .background(Color(0x99020617))
+            .background(DvgColors.Slate950.copy(alpha = 0.60f))
             .border(1.dp, DvgColors.White15, RoundedCornerShape(18.dp)),
     ) {
         DayHeaderBar(date, today)
@@ -101,7 +101,7 @@ private fun DayHeaderBar(date: LocalDate, today: LocalDate) {
             if (isToday) {
                 Text(
                     text = "Hoy",
-                    color = DvgColors.Rose300,
+                    color = DvgColors.Gold400,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -221,14 +221,14 @@ private fun NowLine() {
                 modifier = Modifier
                     .size(10.dp)
                     .clip(CircleShape)
-                    .background(DvgColors.Rose500)
-                    .border(3.dp, DvgColors.Rose500.copy(alpha = 0.25f), CircleShape),
+                    .background(DvgColors.BrandRedSoft)
+                    .border(3.dp, DvgColors.BrandRedSoft.copy(alpha = 0.25f), CircleShape),
             )
-            Box(modifier = Modifier.weight(1f).height(1.dp).background(DvgColors.Rose500.copy(alpha = 0.85f)))
+            Box(modifier = Modifier.weight(1f).height(1.dp).background(DvgColors.BrandRedSoft.copy(alpha = 0.85f)))
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
-                    .background(DvgColors.Rose500)
+                    .background(DvgColors.BrandRedSoft)
                     .padding(horizontal = 6.dp, vertical = 2.dp),
             ) {
                 Text(

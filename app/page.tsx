@@ -16,6 +16,7 @@ import {
   Loader2,
   LogOut,
   Menu,
+  MessageSquarePlus,
   Mic,
   MicOff,
   Plus,
@@ -25,8 +26,8 @@ import {
   Shield,
   Smartphone,
   Sparkles,
-  Trash2,
   UserPlus,
+  X,
 } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
 import { useChat } from "@ai-sdk/react"
@@ -42,6 +43,7 @@ import { CalendarWeekGrid } from "@/components/calendar-week-grid"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { CalendarFeedCard } from "@/components/calendar-feed-card"
 import { AiChatStream } from "@/components/ai-chat-stream"
+import { DvgMark } from "@/components/dvg-mark"
 import { GoogleCalendarCard } from "@/components/google-calendar-card"
 import { ApiKeysCard } from "@/components/api-keys-card"
 import { ContactsManager } from "@/components/contacts-manager"
@@ -59,6 +61,17 @@ import {
 } from "@/lib/calendar-view-utils"
 import { useVoiceInput } from "@/lib/use-voice-input"
 import { DEFAULT_WALLPAPER, readStoredWallpaper } from "@/lib/wallpaper"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 type CalendarEvent = {
   id: string
@@ -186,7 +199,11 @@ const copy = {
     structuredResponse: "Respuesta estructurada recibida (tool result).",
     chatPlaceholder: "Escribe o dicta…",
     chatAttachImage: "Adjuntar imagen",
-    chatClearHistory: "Borrar historial del chat",
+    chatClearHistory: "Nueva conversación",
+    chatClearTitle: "¿Empezar una conversación nueva?",
+    chatClearDescription: "El historial actual se borrará de este dispositivo. Tus eventos no se verán afectados.",
+    chatClearConfirm: "Empezar de nuevo",
+    chatClearCancel: "Conservar conversación",
     chatDefaultImagePrompt: "Extrae fechas y horas de la imagen y agéndalas.",
     chatRecord: "Grabar nota de voz",
     chatRecording: "Grabando…",
@@ -320,7 +337,11 @@ const copy = {
     structuredResponse: "Structured response received (tool result).",
     chatPlaceholder: "Type or dictate…",
     chatAttachImage: "Attach image",
-    chatClearHistory: "Clear chat history",
+    chatClearHistory: "New conversation",
+    chatClearTitle: "Start a new conversation?",
+    chatClearDescription: "The current history will be removed from this device. Your calendar events will not be affected.",
+    chatClearConfirm: "Start fresh",
+    chatClearCancel: "Keep conversation",
     chatDefaultImagePrompt: "Extract dates and times from the image and add them to the calendar.",
     chatRecord: "Record voice note",
     chatRecording: "Recording…",
@@ -467,6 +488,7 @@ export default function HomePage() {
   const [chatInput, setChatInput] = useState("")
   const [pendingChatFiles, setPendingChatFiles] = useState<File[]>([])
   const chatFileInputRef = useRef<HTMLInputElement>(null)
+  const chatTextareaRef = useRef<HTMLTextAreaElement>(null)
   const [chatError, setChatError] = useState("")
   const voiceInput = useVoiceInput({
     locale: language,
@@ -541,6 +563,7 @@ export default function HomePage() {
       }
     },
   })
+  const chatBusy = status === "streaming" || status === "submitted"
 
   useEffect(() => {
     if (!chatStorageKey) return
@@ -649,9 +672,9 @@ export default function HomePage() {
     if (res.ok) await loadFriendsData()
   }
 
-  const submitAiChat = () => {
-    if (status === "streaming") return
-    const text = chatInput.trim()
+  const submitAiChat = (suggestedText?: string) => {
+    if (chatBusy) return
+    const text = suggestedText?.trim() || chatInput.trim()
     if (!text && pendingChatFiles.length === 0) return
     const prompt =
       text || (pendingChatFiles.length > 0 ? t.chatDefaultImagePrompt : "")
@@ -2115,151 +2138,180 @@ export default function HomePage() {
         <Sheet open={aiSheetOpen} onOpenChange={setAiSheetOpen}>
           <SheetContent
             side="right"
-            className="flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col overflow-hidden border-l border-white/10 bg-gradient-to-b from-[#0B0E18] via-[#080A12] to-[#05070D] px-4 pb-safe pt-safe text-white shadow-[inset_1px_0_0_rgba(255,255,255,0.06)] backdrop-blur-2xl sm:px-6 sm:pb-6"
+            className="flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden border-l border-dvg-gold-light/15 bg-[#0c0b0a]/95 px-4 pb-safe pt-safe text-white shadow-[-24px_0_80px_rgba(0,0,0,0.42)] backdrop-blur-2xl sm:max-w-[34rem] sm:px-6 sm:pb-6"
           >
-            {/* El título se salía por arriba y quedaba pisado por el botón de
-                borrar, que además ocupaba media cabecera con su texto. Una sola
-                fila, sin envolver, y el borrar reducido a su icono: lo que se
-                lee primero al abrir el panel debe ser de quién es la voz, no una
-                acción destructiva. */}
-            <SheetHeader className="flex shrink-0 flex-row items-center justify-between gap-3 space-y-0 pr-8 pt-1">
-              <SheetTitle className="flex items-center gap-2 text-base font-semibold tracking-tight text-white">
-                <Sparkles className="h-4 w-4 text-dvg-gold-light" aria-hidden />
-                {t.sheetAi}
-              </SheetTitle>
-              <button
-                type="button"
-                onClick={clearAiChatHistory}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/15 text-white/60 transition hover:bg-white/10 hover:text-white"
-                title={t.chatClearHistory}
-                aria-label={t.chatClearHistory}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </SheetHeader>
-            <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3">
-            {/* El hilo pasa por debajo de la barra de escritura, con un
-                degradado abajo, para que se note que hay más contenido en vez de
-                cortarse en seco contra el borde. */}
-            <div className="relative min-h-0 flex-1">
-              <div className="h-full overflow-y-auto overscroll-contain px-1 pb-4">
-                <AiChatStream
-                  messages={messages}
-                  language={language}
-                  busy={status === "streaming" || status === "submitted"}
-                  emptyText={t.aiHelp}
-                />
-              </div>
-              <div
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-neutral-950 to-transparent"
-                aria-hidden
-              />
+            <div className="pointer-events-none absolute inset-0" aria-hidden>
+              <div className="absolute -right-24 -top-28 h-72 w-72 rounded-full bg-dvg-red/[0.16] blur-[90px]" />
+              <div className="absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-dvg-gold/10 blur-[100px]" />
             </div>
-            <input
-              ref={chatFileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                const list = e.target.files
-                if (!list?.length) return
-                setPendingChatFiles((prev) => [...prev, ...Array.from(list)])
-              }}
-            />
-            {pendingChatFiles.length > 0 ? (
-              <div className="flex flex-wrap gap-2 text-xs text-white/70">
-                {pendingChatFiles.map((f, i) => (
-                  <span
-                    key={`${f.name}-${i}`}
-                    className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[0.06] px-2 py-1"
+
+            <SheetHeader className="relative z-10 flex min-h-[76px] shrink-0 flex-row items-center gap-3 space-y-0 border-b border-dvg-gold-light/[0.12] pr-10">
+              <DvgMark className="h-10 w-10 drop-shadow-[0_8px_22px_rgba(166,27,36,0.30)]" />
+              <div className="min-w-0 flex-1 text-left">
+                <SheetTitle className="truncate text-base font-semibold tracking-tight text-white">{t.sheetAi}</SheetTitle>
+                <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-white/45">
+                  <span className="h-1.5 w-1.5 rounded-full bg-dvg-gold-light shadow-[0_0_8px_rgba(231,198,106,0.65)]" aria-hidden />
+                  {language === "es" ? "Listo para organizar tu agenda" : "Ready to organize your calendar"}
+                </p>
+              </div>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    type="button"
+                    className="mr-1 inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-dvg-gold-light/15 bg-white/[0.045] px-3 text-xs font-medium text-white/60 transition hover:border-dvg-gold-light/30 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dvg-gold-light/70"
+                    title={t.chatClearHistory}
+                    aria-label={t.chatClearHistory}
                   >
-                    {f.name}
-                    <button
-                      type="button"
-                      className="text-white/50 hover:text-white"
-                      onClick={() =>
-                        setPendingChatFiles((prev) => prev.filter((_, j) => j !== i))
-                      }
-                      aria-label={language === "es" ? "Quitar" : "Remove"}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+                    <MessageSquarePlus className="h-4 w-4" aria-hidden />
+                    <span className="hidden sm:inline">{t.chatClearHistory}</span>
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="max-w-[calc(100%_-_2rem)] border-dvg-gold-light/20 bg-neutral-950 text-white shadow-2xl sm:max-w-md">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t.chatClearTitle}</AlertDialogTitle>
+                    <AlertDialogDescription className="leading-6 text-white/55">{t.chatClearDescription}</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="border-white/15 bg-white/[0.05] text-white hover:bg-white/10 hover:text-white">
+                      {t.chatClearCancel}
+                    </AlertDialogCancel>
+                    <AlertDialogAction className="bg-dvg-red text-white hover:bg-dvg-red-soft" onClick={clearAiChatHistory}>
+                      {t.chatClearConfirm}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </SheetHeader>
+
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+              <div className="relative min-h-0 flex-1">
+                <div className="h-full overflow-y-auto overscroll-contain px-1 pb-8 pt-4 [scrollbar-color:rgba(231,198,106,0.25)_transparent] [scrollbar-width:thin]">
+                  <AiChatStream
+                    messages={messages}
+                    language={language}
+                    busy={chatBusy}
+                    emptyText={t.aiHelp}
+                    onSuggestion={(suggestion) => {
+                      setChatInput(suggestion)
+                      requestAnimationFrame(() => chatTextareaRef.current?.focus())
+                    }}
+                  />
+                </div>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#0c0b0a] via-[#0c0b0a]/75 to-transparent" aria-hidden />
               </div>
-            ) : null}
-            <div className="flex shrink-0 gap-2">
-              <button
-                type="button"
-                onClick={() => chatFileInputRef.current?.click()}
-                disabled={status === "streaming"}
-                className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/[0.08] px-3 py-2 text-white/90 transition hover:bg-white/15 disabled:opacity-50"
-                title={t.chatAttachImage}
-              >
-                <ImagePlus className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!voiceInput.isSupported) {
-                    setChatError(t.chatMicUnsupported)
-                    return
-                  }
-                  setChatError("")
-                  if (voiceInput.state === "recording") {
-                    await voiceInput.stop()
-                  } else if (voiceInput.state === "idle" || voiceInput.state === "error") {
-                    await voiceInput.start()
-                  }
-                }}
-                disabled={status === "streaming" || voiceInput.state === "transcribing"}
-                aria-pressed={voiceInput.state === "recording"}
-                className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border px-3 py-2 transition disabled:opacity-50 ${
-                  voiceInput.state === "recording"
-                    ? "border-rose-400/40 bg-rose-500/30 text-white"
-                    : "border-white/20 bg-white/[0.08] text-white/90 hover:bg-white/15"
-                }`}
-                title={
-                  voiceInput.state === "recording"
-                    ? t.chatRecording
-                    : voiceInput.state === "transcribing"
-                      ? t.chatTranscribing
-                      : t.chatRecord
-                }
-              >
-                {voiceInput.state === "transcribing" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : voiceInput.state === "recording" ? (
-                  <MicOff className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-              </button>
+
               <input
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    submitAiChat()
-                  }
+                ref={chatFileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  const files = event.target.files
+                  if (!files?.length) return
+                  setPendingChatFiles((current) => [...current, ...Array.from(files)])
                 }}
-                className={`${inputGlass} min-h-11 min-w-0 flex-1 text-base sm:text-sm`}
-                placeholder={t.chatPlaceholder}
               />
-              <button
-                type="button"
-                onClick={() => submitAiChat()}
-                disabled={
-                  status === "streaming" || (!chatInput.trim() && pendingChatFiles.length === 0)
-                }
-                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-dvg-red to-dvg-gold px-4 py-2 font-medium shadow-lg disabled:opacity-50"
-              >
-                {status === "streaming" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </button>
-            </div>
-            {chatError ? <p className="text-sm text-red-300">{chatError}</p> : null}
+
+              <div className="mb-1 mt-2 shrink-0 rounded-[1.4rem] border border-dvg-gold-light/20 bg-neutral-950/72 p-2 shadow-[0_-18px_55px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl focus-within:border-dvg-gold-light/40 focus-within:ring-2 focus-within:ring-dvg-gold/15">
+                {pendingChatFiles.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 px-1 pb-2 pt-1 text-xs text-white/70">
+                    {pendingChatFiles.map((file, fileIndex) => (
+                      <span key={`${file.name}-${fileIndex}`} className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-xl border border-dvg-gold-light/15 bg-white/[0.05] py-1 pl-2.5 pr-1">
+                        <ImagePlus className="h-3.5 w-3.5 shrink-0 text-dvg-gold-light" aria-hidden />
+                        <span className="max-w-48 truncate">{file.name}</span>
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/45 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dvg-gold-light/70"
+                          onClick={() => setPendingChatFiles((current) => current.filter((_, index) => index !== fileIndex))}
+                          aria-label={`${language === "es" ? "Quitar" : "Remove"} ${file.name}`}
+                        >
+                          <X className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                <label htmlFor="ai-chat-message" className="sr-only">{t.chatPlaceholder}</label>
+                <textarea
+                  id="ai-chat-message"
+                  ref={chatTextareaRef}
+                  rows={2}
+                  value={chatInput}
+                  onChange={(event) => setChatInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault()
+                      submitAiChat()
+                    }
+                  }}
+                  className="max-h-36 min-h-[58px] w-full resize-none bg-transparent px-3 py-2 text-base leading-6 text-white outline-none placeholder:text-white/35 sm:text-sm"
+                  placeholder={t.chatPlaceholder}
+                />
+
+                <div className="flex items-center gap-1.5 border-t border-white/[0.07] px-1 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => chatFileInputRef.current?.click()}
+                    disabled={chatBusy}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white/55 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dvg-gold-light/70"
+                    title={t.chatAttachImage}
+                    aria-label={t.chatAttachImage}
+                  >
+                    <ImagePlus className="h-[18px] w-[18px]" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!voiceInput.isSupported) {
+                        setChatError(t.chatMicUnsupported)
+                        return
+                      }
+                      setChatError("")
+                      if (voiceInput.state === "recording") {
+                        await voiceInput.stop()
+                      } else if (voiceInput.state === "idle" || voiceInput.state === "error") {
+                        await voiceInput.start()
+                      }
+                    }}
+                    disabled={chatBusy || voiceInput.state === "transcribing"}
+                    aria-pressed={voiceInput.state === "recording"}
+                    aria-label={voiceInput.state === "recording" ? t.chatRecording : voiceInput.state === "transcribing" ? t.chatTranscribing : t.chatRecord}
+                    className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dvg-gold-light/70 ${
+                      voiceInput.state === "recording"
+                        ? "bg-dvg-red/35 text-white ring-1 ring-dvg-red-soft/60"
+                        : "text-white/55 hover:bg-white/[0.08] hover:text-white"
+                    }`}
+                    title={voiceInput.state === "recording" ? t.chatRecording : voiceInput.state === "transcribing" ? t.chatTranscribing : t.chatRecord}
+                  >
+                    {voiceInput.state === "transcribing" ? (
+                      <Loader2 className="h-[18px] w-[18px] animate-spin" />
+                    ) : voiceInput.state === "recording" ? (
+                      <MicOff className="h-[18px] w-[18px]" />
+                    ) : (
+                      <Mic className="h-[18px] w-[18px]" />
+                    )}
+                  </button>
+
+                  <p className="ml-1 hidden flex-1 text-[10px] text-white/25 sm:block">
+                    {language === "es" ? "Enter para enviar · Shift + Enter para nueva línea" : "Enter to send · Shift + Enter for a new line"}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => submitAiChat()}
+                    disabled={chatBusy || (!chatInput.trim() && pendingChatFiles.length === 0)}
+                    className="ml-auto inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-dvg-red via-dvg-red-soft to-dvg-gold text-white shadow-[0_8px_24px_rgba(166,27,36,0.30)] transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 disabled:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dvg-gold-light focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 motion-reduce:transform-none"
+                    aria-label={language === "es" ? "Enviar mensaje" : "Send message"}
+                  >
+                    {chatBusy ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <Send className="h-[18px] w-[18px]" />}
+                  </button>
+                </div>
+              </div>
+
+              {chatError ? <p className="pb-1 pt-2 text-sm text-red-300" role="alert">{chatError}</p> : null}
             </div>
           </SheetContent>
         </Sheet>

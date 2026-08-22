@@ -15,15 +15,15 @@ object DvgColors {
     val Slate800 = Color(0xFF25211E)
     val Slate700 = Color(0xFF3A332D)
 
-    val Rose300 = Color(0xFFfda4af)
-    val Rose400 = Color(0xFFfb7185)
-    val Rose500 = Color(0xFFf43f5e)
-    val Rose600 = Color(0xFFe11d48)
+    val BrandRed = Color(0xFFA61B24)
+    val BrandRedSoft = Color(0xFFC7353E)
+    val BrandRedDark = Color(0xFF4A090D)
 
     val Gold300 = Color(0xFFEFD98E)
     val Gold400 = Color(0xFFE7C66A)
     val Gold500 = Color(0xFFC38A2B)
     val Gold600 = Color(0xFFA66A18)
+    val GoldDark = Color(0xFF4C2C08)
 
     val White95 = Color(0xF2FFFFFF)
     val White88 = Color(0xE0FFFFFF)
@@ -39,12 +39,12 @@ object DvgColors {
 }
 
 private val DvgColorScheme = darkColorScheme(
-    primary = DvgColors.Rose500,
+    primary = DvgColors.BrandRed,
     onPrimary = Color.White,
-    primaryContainer = DvgColors.Rose600,
+    primaryContainer = DvgColors.BrandRedDark,
     secondary = DvgColors.Gold500,
     onSecondary = Color.White,
-    tertiary = DvgColors.Rose500,
+    tertiary = DvgColors.Gold400,
     onTertiary = Color.White,
     background = DvgColors.Slate950,
     onBackground = DvgColors.White88,

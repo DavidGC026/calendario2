@@ -11,6 +11,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.rememberAsyncImagePainter
@@ -18,7 +20,10 @@ import coil.request.ImageRequest
 import com.calendario2.mobile.data.PreferencesStore
 
 @Composable
-fun AppBackground(content: @Composable () -> Unit) {
+fun AppBackground(
+    dimmer: Boolean = false,
+    content: @Composable () -> Unit,
+) {
     val context = LocalContext.current
     val prefs = remember(context) { PreferencesStore(context) }
     val customUri by prefs.backgroundUriFlow.collectAsState(initial = null)
@@ -37,6 +42,9 @@ fun AppBackground(content: @Composable () -> Unit) {
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
+            colorFilter = ColorFilter.colorMatrix(
+                ColorMatrix().apply { setToSaturation(0.68f) },
+            ),
         )
         Box(
             modifier = Modifier
@@ -77,6 +85,13 @@ fun AppBackground(content: @Composable () -> Unit) {
                     ),
                 ),
         )
+        if (dimmer) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0x2E0C0B0A)),
+            )
+        }
         content()
     }
 }

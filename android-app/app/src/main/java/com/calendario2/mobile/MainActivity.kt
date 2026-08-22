@@ -21,10 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -38,9 +35,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -60,8 +59,9 @@ import com.calendario2.mobile.notifications.ReminderScheduler
 import com.calendario2.mobile.notifications.SyncRemindersWorker
 import com.calendario2.mobile.ui.calendar.CalendarScreen
 import com.calendario2.mobile.ui.components.AppBackground
+import com.calendario2.mobile.ui.components.DvgMark
+import com.calendario2.mobile.ui.components.authGlassPanel
 import com.calendario2.mobile.ui.components.glassInset
-import com.calendario2.mobile.ui.components.glassPanel
 import com.calendario2.mobile.ui.components.primaryGradient
 import com.calendario2.mobile.ui.theme.CalendarioTheme
 import com.calendario2.mobile.ui.theme.DvgColors
@@ -147,7 +147,7 @@ class MainActivity : ComponentActivity() {
                     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
 
-                AppBackground {
+                AppBackground(dimmer = !loggedIn) {
                     if (!loggedIn) {
                         LoginScreen(
                             loading = loading,
@@ -272,21 +272,13 @@ private fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(primaryGradient()),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White)
-        }
+        DvgMark(size = 64.dp)
         Spacer(Modifier.height(18.dp))
-        Text(text = "DVGCalendar", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text(text = "DVG Calendar", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Recordatorios inteligentes día con día",
-            color = DvgColors.Rose300,
+            color = DvgColors.Gold400,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
         )
@@ -296,7 +288,7 @@ private fun LoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = 420.dp)
-                .glassPanel()
+                .authGlassPanel()
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -354,9 +346,9 @@ private fun GlassTextField(
             unfocusedTextColor = DvgColors.White95,
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent,
-            focusedBorderColor = DvgColors.Rose400.copy(alpha = 0.7f),
+            focusedBorderColor = DvgColors.Gold400.copy(alpha = 0.72f),
             unfocusedBorderColor = Color.Transparent,
-            focusedLabelColor = DvgColors.Rose300,
+            focusedLabelColor = DvgColors.Gold400,
             unfocusedLabelColor = DvgColors.White55,
             cursorColor = DvgColors.Gold400,
         ),
@@ -377,7 +369,12 @@ private fun GradientButton(
             .height(48.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(primaryGradient())
-            .let { if (enabled) it.clickable { onClick() } else it }
+            .alpha(alpha)
+            .clickable(
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick,
+            )
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -388,7 +385,7 @@ private fun GradientButton(
                 strokeWidth = 2.dp,
             )
         } else {
-            Text(text = text, color = Color.White.copy(alpha = alpha), fontWeight = FontWeight.SemiBold)
+            Text(text = text, color = Color.White, fontWeight = FontWeight.SemiBold)
         }
     }
 }

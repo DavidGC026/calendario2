@@ -37,6 +37,17 @@ interface CalendarioApi {
     @DELETE("api/events/{id}")
     suspend fun deleteEvent(@Path("id") id: String): SuccessResponse
 
+    // --- Google Calendar. El servidor sincroniza; el teléfono mira y empuja. ---
+
+    @GET("api/google-calendar")
+    suspend fun googleCalendarStatus(): GoogleCalendarStatus
+
+    @POST("api/google-calendar/sync")
+    suspend fun googleCalendarSync(): GoogleSyncResponse
+
+    @DELETE("api/google-calendar")
+    suspend fun googleCalendarDisconnect(): SuccessResponse
+
     companion object {
         fun create(baseUrl: String, tokenProvider: () -> String?): CalendarioApi {
             val log = HttpLoggingInterceptor().apply {

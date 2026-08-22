@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">DVGCalendar</string>
-    <string name="login_title">DVGCalendar</string>
+    <string name="app_name">DVG Calendar</string>
+    <string name="login_title">DVG Calendar</string>
     <string name="login_subtitle">Recordatorios inteligentes día con día</string>
     <string name="email">Correo</string>
     <string name="password">Contraseña</string>

@@ -69,7 +69,7 @@ fun EventDetailSheet(
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
                 .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
-                .background(Color(0xFFf8fafc))
+                .background(Color(0xFFFAF7F0))
                 .clickable(enabled = false) {}
                 .padding(bottom = 18.dp),
         ) {
@@ -109,7 +109,7 @@ fun EventDetailSheet(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color.White)
-                    .border(1.dp, Color(0xFFe2e8f0), RoundedCornerShape(14.dp))
+                    .border(1.dp, Color(0xFFE7DED1), RoundedCornerShape(14.dp))
                     .padding(horizontal = 18.dp, vertical = 16.dp),
             ) {
                 DetailRow(icon = { Bullet(accent) }, text = dateLabel)
@@ -145,13 +145,13 @@ fun EventDetailSheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFe2e8f0))
+                            .background(Color(0xFFE7DED1))
                             .height(1.dp),
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
                         text = event.description,
-                        color = Color(0xFF475569),
+                        color = Color(0xFF574B42),
                         fontSize = 13.sp,
                     )
                 }
@@ -192,7 +192,7 @@ private fun DetailRow(icon: @Composable () -> Unit, text: String) {
     ) {
         Box(modifier = Modifier.width(22.dp), contentAlignment = Alignment.Center) { icon() }
         Spacer(Modifier.width(10.dp))
-        Text(text = text, color = Color(0xFF334155), fontSize = 14.sp)
+        Text(text = text, color = Color(0xFF3A312B), fontSize = 14.sp)
     }
 }
 

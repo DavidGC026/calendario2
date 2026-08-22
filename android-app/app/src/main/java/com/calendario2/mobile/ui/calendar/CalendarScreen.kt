@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.AlarmOn
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
@@ -70,9 +71,12 @@ import com.calendario2.mobile.notifications.NotificationActions
 import com.calendario2.mobile.notifications.ReminderScheduler
 import com.calendario2.mobile.ui.ai.ChatBubble
 import com.calendario2.mobile.ui.ai.ChatSheet
+import com.calendario2.mobile.ui.google.GoogleCalendarSheet
+import com.calendario2.mobile.data.GoogleCalendarStatus
 import com.calendario2.mobile.ui.ai.VoiceUiState
 import com.calendario2.mobile.ui.components.BottomNavBar
 import com.calendario2.mobile.ui.components.CalendarMode
+import com.calendario2.mobile.ui.components.DvgMark
 import com.calendario2.mobile.ui.components.primaryGradient
 import com.calendario2.mobile.ui.event.EventDetailSheet
 import com.calendario2.mobile.ui.event.EventDraft
@@ -100,6 +104,13 @@ fun CalendarScreen(
     onLogout: () -> Unit,
 ) {
     val today = remember { LocalDate.now() }
+    // Google Calendar: el estado lo tiene el servidor, aquí solo se refleja.
+    var googleOpen by remember { mutableStateOf(false) }
+    var googleStatus by remember { mutableStateOf<GoogleCalendarStatus?>(null) }
+    var googleLoading by remember { mutableStateOf(false) }
+    var googleSyncing by remember { mutableStateOf(false) }
+    var googleMessage by remember { mutableStateOf<String?>(null) }
+    var googleError by remember { mutableStateOf<String?>(null) }
     var mode by remember { mutableStateOf(CalendarMode.Month) }
     var selectedDate by remember { mutableStateOf(today) }
     var month by remember { mutableStateOf(YearMonth.from(today)) }
@@ -234,6 +245,10 @@ fun CalendarScreen(
                 menuOpen = false
                 scope.launch { prefs.setBackgroundUri(null) }
             },
+            onGoogleCalendar = {
+                menuOpen = false
+                googleOpen = true
+            },
             onTestNotification = {
                 menuOpen = false
                 NotificationActions.fireTestNotification(context)
@@ -250,7 +265,7 @@ fun CalendarScreen(
 
         if (loading && events.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(top = 40.dp), contentAlignment = Alignment.TopCenter) {
-                CircularProgressIndicator(color = DvgColors.Rose400)
+                CircularProgressIndicator(color = DvgColors.Gold400)
             }
         } else {
             error?.let {
@@ -428,6 +443,63 @@ fun CalendarScreen(
                 }
             } else null,
             onClose = { sheetDraft = null },
+        )
+    }
+
+    // Google Calendar: se pregunta al abrir y al volver de conceder el permiso.
+    LaunchedEffect(googleOpen) {
+        if (!googleOpen) return@LaunchedEffect
+        googleLoading = true
+        googleError = null
+        runCatching { api.googleCalendarStatus() }
+            .onSuccess { googleStatus = it }
+            .onFailure { googleError = "No pude consultar la conexión con Google." }
+        googleLoading = false
+    }
+
+    if (googleOpen) {
+        GoogleCalendarSheet(
+            status = googleStatus,
+            loading = googleLoading,
+            syncing = googleSyncing,
+            message = googleMessage,
+            error = googleError,
+            onConnect = { url ->
+                // El permiso se concede en el dominio de Google, en el navegador
+                // del teléfono y con la barra de direcciones a la vista. Nunca en
+                // un WebView nuestro: eso enseña a escribir la contraseña de
+                // Google en cualquier pantalla que la pida.
+                googleMessage = "Termina en el navegador y vuelve aquí."
+                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+            },
+            onSyncNow = {
+                googleSyncing = true
+                googleMessage = null
+                googleError = null
+                scope.launch {
+                    runCatching { api.googleCalendarSync() }
+                        .onSuccess { r ->
+                            val d = r.result
+                            googleMessage = if (d == null) "Listo." else
+                                "Subidos ${d.pushed}, bajados ${d.pulled}, borrados aquí ${d.deletedHere}, borrados en Google ${d.deletedThere}."
+                            runCatching { api.googleCalendarStatus() }.onSuccess { googleStatus = it }
+                            onRefresh()
+                        }
+                        .onFailure { googleError = "La sincronización falló." }
+                    googleSyncing = false
+                }
+            },
+            onDisconnect = {
+                scope.launch {
+                    runCatching { api.googleCalendarDisconnect() }
+                        .onSuccess {
+                            googleMessage = "Cuenta desconectada."
+                            runCatching { api.googleCalendarStatus() }.onSuccess { googleStatus = it }
+                        }
+                        .onFailure { googleError = "No pude desconectar." }
+                }
+            },
+            onClose = { googleOpen = false; googleMessage = null; googleError = null },
         )
     }
 
@@ -619,6 +691,7 @@ private fun Header(
     onLogout: () -> Unit,
     onChangeBackground: () -> Unit,
     onResetBackground: () -> Unit,
+    onGoogleCalendar: () -> Unit,
     onTestNotification: () -> Unit,
     onGrantExactAlarms: (() -> Unit)?,
 ) {
@@ -632,19 +705,11 @@ private fun Header(
     }
 
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(CircleShape)
-                .background(primaryGradient()),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-        }
+        DvgMark(size = 38.dp)
         Spacer(Modifier.size(10.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text("DVGCalendar", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Text(title, color = DvgColors.Rose300, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Text("DVG Calendar", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = DvgColors.Gold400, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
         IconButton(onClick = onPrev) { Icon(Icons.Default.ChevronLeft, contentDescription = "Anterior", tint = DvgColors.White80) }
         IconButton(onClick = onNext) { Icon(Icons.Default.ChevronRight, contentDescription = "Siguiente", tint = DvgColors.White80) }
@@ -669,7 +734,7 @@ private fun Header(
                 )
                 DropdownMenuItem(
                     text = { Text("Probar notificación", color = DvgColors.White88) },
-                    leadingIcon = { Icon(Icons.Default.Bolt, null, tint = DvgColors.Rose400) },
+                    leadingIcon = { Icon(Icons.Default.Bolt, null, tint = DvgColors.BrandRedSoft) },
                     onClick = onTestNotification,
                 )
                 if (onGrantExactAlarms != null) {
@@ -681,13 +746,18 @@ private fun Header(
                 }
                 DropdownMenuItem(
                     text = { Text("Cambiar fondo…", color = DvgColors.White88) },
-                    leadingIcon = { Icon(Icons.Default.PhotoLibrary, null, tint = DvgColors.Rose400) },
+                    leadingIcon = { Icon(Icons.Default.PhotoLibrary, null, tint = DvgColors.Gold400) },
                     onClick = onChangeBackground,
                 )
                 DropdownMenuItem(
                     text = { Text("Restablecer fondo", color = DvgColors.White88) },
                     leadingIcon = { Icon(Icons.Default.RestartAlt, null, tint = DvgColors.White65) },
                     onClick = onResetBackground,
+                )
+                DropdownMenuItem(
+                    text = { Text("Google Calendar", color = DvgColors.White88) },
+                    leadingIcon = { Icon(Icons.Default.CalendarMonth, null, tint = DvgColors.Gold400) },
+                    onClick = onGoogleCalendar,
                 )
                 DropdownMenuItem(
                     text = { Text("Cerrar sesión", color = Color(0xFFFCA5A5)) },
@@ -709,8 +779,8 @@ private fun FabPrimary(
         modifier = Modifier
             .size(56.dp)
             .clip(CircleShape)
-            .background(DvgColors.Gold600)
-            .border(2.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+            .background(DvgColors.BrandRed)
+            .border(2.dp, DvgColors.Gold400.copy(alpha = 0.70f), CircleShape)
             .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
@@ -729,7 +799,7 @@ private fun FabSecondary(
             .size(46.dp)
             .clip(CircleShape)
             .background(primaryGradient())
-            .border(2.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+            .border(2.dp, DvgColors.Gold400.copy(alpha = 0.55f), CircleShape)
             .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {

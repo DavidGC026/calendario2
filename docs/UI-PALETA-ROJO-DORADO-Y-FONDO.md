@@ -138,6 +138,18 @@ La foto propia se comprime en canvas a JPEG: lado máximo 1920 px, calidad ~0.78
 
 `next.config.mjs` ya tiene `images.unoptimized: true`, así que las URLs de Unsplash y los data URL no requieren `remotePatterns` extra. El data URL se pinta con `<img>`, no con `next/image`.
 
+### Chat del asistente
+
+El panel web del asistente se plantea como una **bitácora de agenda**, no como un chat genérico:
+
+- la cabecera usa la marca DVG y comunica el estado del asistente;
+- el estado vacío ofrece tres puntos de partida que preparan el mensaje sin enviarlo automáticamente;
+- los mensajes del asistente siguen una línea temporal y los eventos creados o editados se confirman con una ficha de calendario;
+- texto, adjuntos, voz y envío viven dentro de un único compositor multilínea;
+- “Nueva conversación” sustituye al botón de papelera y exige confirmación antes de borrar el historial local.
+
+Los colores propios de cada calendario se conservan únicamente en la barra de sus fichas, porque ahí funcionan como información semántica.
+
 ---
 
 ## 4. Android
@@ -170,6 +182,7 @@ Los colores de carril en `CalendarUtils.kt` (incluido el morado de Familia) no s
 **Web (paleta + fondo)**
 
 - `app/page.tsx`
+- `components/ai-chat-stream.tsx`
 - `app/login/page.tsx`, `app/register/page.tsx`, `app/login/forgot-password/page.tsx`
 - `app/admin/page.tsx`, `app/notas/page.tsx`
 - `components/calendar-sidebar.tsx`, `calendar-week-grid.tsx`, `mobile-bottom-nav.tsx`
