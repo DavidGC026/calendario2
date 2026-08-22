@@ -664,7 +664,7 @@ private fun Header(
                 )
                 DropdownMenuItem(
                     text = { Text("Sincronizar recordatorios", color = DvgColors.White88) },
-                    leadingIcon = { Icon(Icons.Default.NotificationsActive, null, tint = DvgColors.Blue400) },
+                    leadingIcon = { Icon(Icons.Default.NotificationsActive, null, tint = DvgColors.Gold400) },
                     onClick = onSyncReminders,
                 )
                 DropdownMenuItem(
@@ -709,7 +709,7 @@ private fun FabPrimary(
         modifier = Modifier
             .size(56.dp)
             .clip(CircleShape)
-            .background(DvgColors.Blue600)
+            .background(DvgColors.Gold600)
             .border(2.dp, Color.White.copy(alpha = 0.25f), CircleShape)
             .clickable { onClick() },
         contentAlignment = Alignment.Center,

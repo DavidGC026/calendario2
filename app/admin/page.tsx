@@ -28,8 +28,8 @@ export default async function AdminUsersPage() {
   const openaiStatus = await getOpenAiKeyPublicStatus()
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-rose-950/90 via-slate-950 to-blue-950/90" />
+    <main className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-dvg-red-dark/90 via-neutral-950 to-dvg-gold-dark/80" />
       <div className="relative mx-auto max-w-3xl px-safe py-8 md:max-w-4xl md:py-12">
         <div className="mb-8 flex flex-col gap-4 border-b border-white/10 pb-6">
           <div className="flex flex-wrap items-center gap-2">

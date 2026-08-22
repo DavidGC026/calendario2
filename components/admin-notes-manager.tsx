@@ -148,7 +148,7 @@ export function AdminNotesManager({ initialNotes }: Props) {
       </div>
 
       {creating ? (
-        <section className="rounded-2xl border border-white/15 bg-slate-950/60 p-5 md:p-6">
+        <section className="rounded-2xl border border-white/15 bg-neutral-950/60 p-5 md:p-6">
           <h2 className="mb-4 text-lg font-semibold text-white">Nueva nota</h2>
           <label className="block text-sm text-white/60">
             Título
@@ -175,7 +175,7 @@ export function AdminNotesManager({ initialNotes }: Props) {
               type="button"
               onClick={() => void submitCreate()}
               disabled={loading || !draftTitle.trim()}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:opacity-95 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-dvg-red to-dvg-gold px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:brightness-110 disabled:opacity-50"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Guardar
@@ -192,7 +192,7 @@ export function AdminNotesManager({ initialNotes }: Props) {
 
       <ul className="space-y-6">
         {sorted.map((n) => (
-          <li key={n.id} className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/50 shadow-xl backdrop-blur-md">
+          <li key={n.id} className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/50 shadow-xl backdrop-blur-md">
             {editingId === n.id ? (
               <div className="p-5 md:p-6">
                 <h2 className="mb-4 text-lg font-semibold text-white">Editar nota</h2>
@@ -219,7 +219,7 @@ export function AdminNotesManager({ initialNotes }: Props) {
                     type="button"
                     onClick={() => void submitEdit(n.id)}
                     disabled={loading || !editTitle.trim()}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:opacity-95 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-dvg-red to-dvg-gold px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:brightness-110 disabled:opacity-50"
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     Guardar cambios

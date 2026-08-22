@@ -39,48 +39,48 @@
 }
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  --background: 40 20% 98%;
+  --foreground: 24 10% 8%;
   --card: 0 0% 100%;
   --card-foreground: 222.2 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --primary: 356 72% 38%;
+  --primary-foreground: 40 33% 97%;
+  --secondary: 39 75% 37%;
+  --secondary-foreground: 40 33% 97%;
+  --muted: 36 18% 94%;
+  --muted-foreground: 24 8% 40%;
+  --accent: 42 54% 82%;
+  --accent-foreground: 24 10% 12%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
+  --border: 36 16% 84%;
+  --input: 36 16% 84%;
+  --ring: 39 75% 37%;
   --radius: 0.5rem;
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
+  --background: 24 12% 5%;
+  --foreground: 40 33% 97%;
+  --card: 24 12% 7%;
+  --card-foreground: 40 33% 97%;
+  --popover: 24 12% 6%;
+  --popover-foreground: 40 33% 97%;
+  --primary: 356 58% 49%;
+  --primary-foreground: 40 33% 97%;
+  --secondary: 40 68% 43%;
+  --secondary-foreground: 24 12% 6%;
+  --muted: 28 12% 15%;
+  --muted-foreground: 36 12% 68%;
+  --accent: 38 32% 18%;
+  --accent-foreground: 43 68% 66%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 224.3 76.3% 48%;
+  --border: 34 18% 20%;
+  --input: 34 18% 20%;
+  --ring: 43 68% 66%;
 }
 
 @layer utilities {
@@ -94,4 +94,15 @@
 .react-draggable {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

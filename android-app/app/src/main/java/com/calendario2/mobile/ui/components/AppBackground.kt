@@ -31,7 +31,7 @@ fun AppBackground(content: @Composable () -> Unit) {
             .build(),
     )
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF020617))) {
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0C0B0A))) {
         Image(
             painter = painter,
             contentDescription = null,
@@ -44,9 +44,9 @@ fun AppBackground(content: @Composable () -> Unit) {
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xB30b1226),
-                            Color(0x8C0b1226),
-                            Color(0xD9020617),
+                            Color(0xB3120D0D),
+                            Color(0x8C120D0D),
+                            Color(0xD90C0B0A),
                         ),
                     ),
                 ),
@@ -57,7 +57,7 @@ fun AppBackground(content: @Composable () -> Unit) {
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0x52e11d48),
+                            Color(0x4DA61B24),
                             Color(0x00000000),
                         ),
                         radius = 900f,
@@ -70,7 +70,7 @@ fun AppBackground(content: @Composable () -> Unit) {
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0x472563eb),
+                            Color(0x3DA66A18),
                             Color(0x00000000),
                         ),
                         radius = 1100f,

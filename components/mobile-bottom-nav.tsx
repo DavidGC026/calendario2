@@ -31,7 +31,7 @@ export function MobileBottomNav({
   return (
     <nav
       aria-label="Calendar navigation"
-      className="pointer-events-auto fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-slate-950/90 backdrop-blur-xl md:inset-x-auto md:left-1/2 md:bottom-4 md:-translate-x-1/2 md:rounded-2xl md:border md:border-white/15 md:bg-slate-900/85 md:shadow-2xl"
+      className="pointer-events-auto fixed inset-x-0 bottom-0 z-50 border-t border-dvg-gold-light/15 bg-neutral-950/88 backdrop-blur-xl md:inset-x-auto md:left-1/2 md:bottom-4 md:-translate-x-1/2 md:rounded-2xl md:border md:border-dvg-gold-light/20 md:bg-neutral-900/82 md:shadow-2xl"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="mx-auto flex max-w-md items-stretch justify-around gap-1 px-2 pt-1.5 pb-1 md:gap-2 md:px-3 md:py-2">
@@ -45,11 +45,11 @@ export function MobileBottomNav({
                 aria-current={active ? "page" : undefined}
                 className={`flex w-full items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition-colors md:gap-1.5 md:px-3 md:text-sm flex-col md:flex-row ${
                   active
-                    ? "bg-rose-500/20 text-rose-200"
+                    ? "bg-dvg-red/25 text-dvg-gold-light"
                     : "text-white/55 hover:text-white/85"
                 }`}
               >
-                <Icon className={`h-5 w-5 md:h-4 md:w-4 ${active ? "text-rose-300" : ""}`} />
+                <Icon className={`h-5 w-5 md:h-4 md:w-4 ${active ? "text-dvg-gold-light" : ""}`} />
                 <span>{label}</span>
               </button>
             </li>

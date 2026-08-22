@@ -17,6 +17,15 @@ module.exports = {
     },
     extend: {
       colors: {
+        dvg: {
+          red: "#A61B24",
+          "red-soft": "#C7353E",
+          "red-dark": "#4A090D",
+          gold: "#A66A18",
+          "gold-light": "#E7C66A",
+          "gold-dark": "#4C2C08",
+          ink: "#0C0B0A",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

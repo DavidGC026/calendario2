@@ -67,7 +67,7 @@ export function WallpaperPicker({ userId, value, onChange, language, inputClassN
               type="button"
               onClick={() => apply(preset.url)}
               className={`overflow-hidden rounded-xl ring-2 transition ${
-                selected ? "ring-rose-400" : "ring-white/15 hover:ring-white/35"
+                selected ? "ring-dvg-gold-light" : "ring-white/15 hover:ring-white/35"
               }`}
               aria-pressed={selected}
               title={language === "es" ? preset.labelEs : preset.labelEn}

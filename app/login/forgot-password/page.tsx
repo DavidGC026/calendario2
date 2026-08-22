@@ -100,9 +100,9 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden text-slate-100">
+    <main className="relative min-h-[100dvh] overflow-x-hidden overflow-y-auto text-slate-100">
       <AppWallpaper dimmer />
-      <div className="relative flex min-h-screen items-center justify-center px-4">
+      <div className="relative flex min-h-[100dvh] items-center justify-center px-4 py-6">
       <div className="w-full max-w-md rounded-2xl border border-white/20 bg-white/10 p-6 space-y-4 backdrop-blur-xl">
         <header className="space-y-1">
           <h1 className="text-2xl font-semibold">Recuperar contraseña</h1>
@@ -125,7 +125,7 @@ export default function ForgotPasswordPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-white/20 bg-slate-900 px-3 py-2"
+                className="w-full rounded-md border border-white/20 bg-black/25 px-3 py-2 outline-none backdrop-blur-md transition focus:border-dvg-gold-light/60 focus:ring-2 focus:ring-dvg-gold/25"
               />
             </div>
 
@@ -135,7 +135,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-md bg-gradient-to-r from-rose-600 to-blue-600 py-2 font-medium disabled:opacity-50"
+              className="w-full rounded-md bg-gradient-to-r from-dvg-red to-dvg-gold py-2 font-medium shadow-lg disabled:opacity-50"
             >
               {loading ? "Enviando..." : "Enviar código"}
             </button>
@@ -151,7 +151,7 @@ export default function ForgotPasswordPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-white/20 bg-slate-900 px-3 py-2"
+                className="w-full rounded-md border border-white/20 bg-black/25 px-3 py-2 outline-none backdrop-blur-md transition focus:border-dvg-gold-light/60 focus:ring-2 focus:ring-dvg-gold/25"
               />
             </div>
 
@@ -165,7 +165,7 @@ export default function ForgotPasswordPage() {
                 autoComplete="one-time-code"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                className="w-full rounded-md border border-white/20 bg-slate-900 px-3 py-2 tracking-[0.5em] text-center text-lg font-mono"
+                className="w-full rounded-md border border-white/20 bg-black/25 px-3 py-2 text-center font-mono text-lg tracking-[0.5em] outline-none backdrop-blur-md transition focus:border-dvg-gold-light/60 focus:ring-2 focus:ring-dvg-gold/25"
                 placeholder="······"
               />
             </div>
@@ -179,7 +179,7 @@ export default function ForgotPasswordPage() {
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full rounded-md border border-white/20 bg-slate-900 px-3 py-2"
+                className="w-full rounded-md border border-white/20 bg-black/25 px-3 py-2 outline-none backdrop-blur-md transition focus:border-dvg-gold-light/60 focus:ring-2 focus:ring-dvg-gold/25"
               />
             </div>
 
@@ -192,7 +192,7 @@ export default function ForgotPasswordPage() {
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded-md border border-white/20 bg-slate-900 px-3 py-2"
+                className="w-full rounded-md border border-white/20 bg-black/25 px-3 py-2 outline-none backdrop-blur-md transition focus:border-dvg-gold-light/60 focus:ring-2 focus:ring-dvg-gold/25"
               />
             </div>
 
@@ -202,7 +202,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-md bg-gradient-to-r from-rose-600 to-blue-600 py-2 font-medium disabled:opacity-50"
+              className="w-full rounded-md bg-gradient-to-r from-dvg-red to-dvg-gold py-2 font-medium shadow-lg disabled:opacity-50"
             >
               {loading ? "Confirmando..." : "Cambiar contraseña"}
             </button>
@@ -212,7 +212,7 @@ export default function ForgotPasswordPage() {
                 type="button"
                 onClick={handleResend}
                 disabled={loading}
-                className="text-blue-400 hover:underline disabled:opacity-50"
+                className="text-dvg-gold-light hover:underline disabled:opacity-50"
               >
                 Reenviar código
               </button>
@@ -239,7 +239,7 @@ export default function ForgotPasswordPage() {
             <p className="text-sm text-emerald-400">{info}</p>
             <Link
               href="/login"
-              className="inline-block rounded-md bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 text-sm font-medium"
+              className="inline-block rounded-md bg-gradient-to-r from-dvg-red to-dvg-gold px-4 py-2 text-sm font-medium"
             >
               Ir al inicio de sesión
             </Link>
@@ -248,7 +248,7 @@ export default function ForgotPasswordPage() {
 
         <p className="text-sm text-slate-300 pt-2 border-t border-white/10">
           ¿Recordaste la contraseña?{" "}
-          <Link href="/login" className="text-blue-400 hover:underline">
+          <Link href="/login" className="text-dvg-gold-light hover:underline">
             Volver a iniciar sesión
           </Link>
         </p>

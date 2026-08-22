@@ -13,7 +13,7 @@ import {
   parseTimeToMinutes,
 } from "@/lib/calendar-view-utils"
 
-type CalEvent = {
+type TimelineCalendarEvent = {
   id: string
   title: string
   eventDate: string
@@ -22,13 +22,13 @@ type CalEvent = {
   color: string
 }
 
-type CalendarWeekGridProps = {
+type CalendarWeekGridProps<TEvent extends TimelineCalendarEvent> = {
   viewDates: string[]
   hourRows: number[]
-  eventsByDate: Map<string, CalEvent[]>
+  eventsByDate: Map<string, TEvent[]>
   anchorDate: string
   today: string
-  onEventClick: (e: CalEvent) => void
+  onEventClick: (e: TEvent) => void
   formatHour: (h: number) => string
   /** Tap en una hora vacía. Solo se invoca en vista día (single day). */
   onCreateAtHour?: (date: string, hour: number) => void
@@ -41,7 +41,7 @@ type CalendarWeekGridProps = {
 const SWIPE_THRESHOLD_PX = 50
 const SWIPE_HORIZONTAL_RATIO = 1.5
 
-export function CalendarWeekGrid({
+export function CalendarWeekGrid<TEvent extends TimelineCalendarEvent>({
   viewDates,
   hourRows,
   eventsByDate,
@@ -52,7 +52,7 @@ export function CalendarWeekGrid({
   onCreateAtHour,
   onSwipeDay,
   scrollNowNonce = 0,
-}: CalendarWeekGridProps) {
+}: CalendarWeekGridProps<TEvent>) {
   const isSingleDay = viewDates.length === 1
   const isMobile = useIsMobile()
   const slotH = isSingleDay && isMobile ? 64 : 48
@@ -135,13 +135,13 @@ export function CalendarWeekGrid({
     <div
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/15 bg-slate-950/60 md:bg-white/[0.07] md:backdrop-blur-xl"
+      className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/15 bg-neutral-950/60 md:bg-white/[0.07] md:backdrop-blur-xl"
     >
       <div
         className={`flex min-h-0 min-w-0 flex-1 overscroll-contain [-webkit-overflow-scrolling:touch] ${overflowClass}`}
       >
       <div
-        className="sticky left-0 z-20 w-12 shrink-0 border-r border-white/10 bg-slate-950/60 py-2 text-right text-[11px] font-medium tabular-nums text-white/55 sm:w-14 md:w-14"
+        className="sticky left-0 z-20 w-12 shrink-0 border-r border-white/10 bg-neutral-950/60 py-2 text-right text-[11px] font-medium tabular-nums text-white/55 sm:w-14 md:w-14"
         style={{ paddingTop: 40 }}
       >
         {hourRows.map((h) => (
@@ -167,7 +167,7 @@ export function CalendarWeekGrid({
                 isToday ? "bg-rose-500/10" : isAnchor ? "bg-white/[0.04]" : ""
               }`}
             >
-              <div className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/70 px-1 py-2 text-center backdrop-blur-md">
+              <div className="sticky top-0 z-10 border-b border-white/10 bg-neutral-950/70 px-1 py-2 text-center backdrop-blur-md">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-white/60">{wd}</p>
                 <p
                   className={`text-lg font-semibold tabular-nums tracking-tight ${

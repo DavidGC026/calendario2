@@ -1,17 +1,17 @@
 ---
-title: Paleta rojo-azul y fondo personalizable
+title: Paleta rojo-dorado y fondo personalizable
 lang: es
 fecha: 2026-08-21
 ultima_revision: 2026-08-21
 ---
 
-# Paleta rojo-azul y fondo personalizable
+# Paleta rojo-dorado y fondo personalizable
 
 | Campo | Valor |
 |-------|-------|
 | **Fecha** | `2026-08-21` |
 | **Ámbito** | UI web (Next.js) y app Android |
-| **Motivo** | El chrome era azul + violeta (se leía morado). Se pidió rojo con azul, y poder cambiar la imagen de fondo desde Ajustes. |
+| **Motivo** | La mezcla de rojo con halos y superficies azules se leía morada. Se pidió conservar el cristal, eliminar ese matiz y adoptar rojo con dorado. |
 
 Este documento cubre **qué** cambió, **por qué**, y **dónde** está el código. No hace falta migración de base de datos ni variables de entorno nuevas.
 
@@ -30,12 +30,14 @@ Este documento cubre **qué** cambió, **por qué**, y **dónde** está el códi
 
 ## 1. Decisión
 
-El calendario ya tenía un look oscuro con cristal (`glass`) y una foto de fondo. El acento del chrome (botones, FABs, “hoy”, overlays, login) era **sky + violet**. Eso se veía azul-morado, no rojo-azul.
+El calendario conserva su look oscuro con cristal (`glass`) y foto de fondo. El halo azul y los degradados rojo → azul se mezclaban visualmente sobre el cristal y producían zonas moradas.
 
 **Qué se cambió**
 
-- Acentos de interfaz: `rose` (rojo) + `blue`.
-- Overlay del fondo: halo rojo arriba-izquierda y azul abajo-derecha.
+- Acentos de interfaz: carmín DVG + dorado tostado.
+- Overlay del fondo: halo carmín arriba-izquierda y dorado abajo-derecha.
+- Base de superficies: carbón cálido, sin el subtono azul de `slate`.
+- Asset de marca: sello-calendario vectorial `DVG`, con variantes PNG para navegador y dispositivos Apple.
 - Foto por defecto: atardecer (faro / costa), más coherente con la paleta.
 - En Ajustes (web): elegir escena, subir foto propia o volver al fondo por defecto.
 
@@ -60,31 +62,31 @@ En Android el fondo ya vivía en preferencias locales. En web se replica el mism
 
 ## 2. Paleta
 
-Tokens que usa el chrome. Los hex coinciden con Tailwind `rose-*` y `blue-*`.
+Tokens que usa el chrome. Están definidos como colores `dvg-*` en Tailwind.
 
 | Rol | Tailwind / Compose | Hex |
 |-----|--------------------|-----|
-| Rojo CTA | `rose-600` | `#e11d48` |
-| Rojo acento | `rose-500` / `rose-400` | `#f43f5e` / `#fb7185` |
-| Azul CTA | `blue-600` | `#2563eb` |
-| Azul acento | `blue-500` / `blue-400` | `#3b82f6` / `#60a5fa` |
-| Base | `slate-950` | `#020617` |
+| Carmín CTA | `dvg-red` | `#A61B24` |
+| Carmín claro | `dvg-red-soft` | `#C7353E` |
+| Dorado CTA | `dvg-gold` | `#A66A18` |
+| Dorado claro | `dvg-gold-light` | `#E7C66A` |
+| Base | `dvg-ink` | `#0C0B0A` |
 
 Degradado primario (botones, FAB de IA, CTAs):
 
 ```
-from-rose-600 to-blue-600
+from-dvg-red to-dvg-gold
 ```
 
-En Android: `primaryGradient()` en `Glass.kt` (`Rose600` → `Blue600`). El FAB de crear evento es azul sólido (`Blue600`) para distinguirlo del de IA.
+En Android: `primaryGradient()` en `Glass.kt` (`Rose600` → `Gold600`). El FAB de crear evento usa dorado sólido para distinguirlo del de IA.
 
 Pantallas con overlay de carga (admin, notas, spinner de sesión):
 
 ```
-from-rose-950/90 via-slate-950 to-blue-950/90
+from-dvg-red-dark/90 via-neutral-950 to-dvg-gold-dark/80
 ```
 
-Correos transaccionales (`lib/email.ts`): acento por defecto `#e11d48` → `#2563eb`. El color del evento (carril) sigue mandando cuando el mail es de un evento concreto.
+El color del evento (carril) sigue mandando cuando una pieza corresponde a un evento concreto; esos colores funcionales no forman parte del chrome de marca.
 
 ---
 
@@ -128,11 +130,11 @@ La foto propia se comprime en canvas a JPEG: lado máximo 1920 px, calidad ~0.78
 | Archivo | Rol |
 |---------|-----|
 | `lib/wallpaper.ts` | Presets, lectura/escritura, compresión |
-| `components/app-wallpaper.tsx` | Capa de fondo + overlays rojo/azul |
+| `components/app-wallpaper.tsx` | Capa de fondo + overlays carmín/dorado |
 | `components/wallpaper-picker.tsx` | UI de Ajustes |
 | `app/page.tsx` | Estado `wallpaperSrc` y el picker en el sheet |
 
-`AppWallpaper` también cubre login, registro y recuperar contraseña (fondo por defecto, más oscuro: `dimmer`). Admin y notas no usan foto; solo el degradado rose → blue sobre slate.
+`AppWallpaper` también cubre login, registro y recuperar contraseña (fondo por defecto, más oscuro: `dimmer`). Admin y notas no usan foto; muestran el degradado carmín → dorado sobre carbón cálido.
 
 `next.config.mjs` ya tiene `images.unoptimized: true`, así que las URLs de Unsplash y los data URL no requieren `remotePatterns` extra. El data URL se pinta con `<img>`, no con `next/image`.
 
@@ -144,11 +146,11 @@ El selector de fondo **ya existía** en el menú del calendario (“Cambiar fond
 
 | Pieza | Cambio |
 |-------|--------|
-| `DvgColors` / `Theme.kt` | Primario `Rose500`, secundario `Blue500` |
-| `Glass.kt` `primaryGradient()` | `Rose600` → `Blue600` (antes violet → sky) |
-| `AppBackground.kt` | Halos rose y blue; URL por defecto = atardecer |
+| `DvgColors` / `Theme.kt` | Primario `Rose500`, secundario `Gold500` |
+| `Glass.kt` `primaryGradient()` | `Rose600` → `Gold600` |
+| `AppBackground.kt` | Halos carmín y dorado; URL por defecto = atardecer |
 | `PreferencesStore.DEFAULT_BACKGROUND_URL` | Misma URL que `DEFAULT_WALLPAPER` en web |
-| Vistas / FABs / login | `Sky*` y `Violet*` de chrome sustituidos por `Rose*` / `Blue*` |
+| Vistas / FABs / login | Chrome alineado a `Rose*` / `Gold*` |
 
 Un fondo elegido en el teléfono **no** se sincroniza con la web (ni al revés). Cada cliente guarda el suyo.
 
@@ -163,7 +165,7 @@ Los colores de carril en `CalendarUtils.kt` (incluido el morado de Familia) no s
 - `lib/wallpaper.ts`
 - `components/app-wallpaper.tsx`
 - `components/wallpaper-picker.tsx`
-- `docs/UI-PALETA-ROJO-AZUL-Y-FONDO.md` (este archivo)
+- `docs/UI-PALETA-ROJO-DORADO-Y-FONDO.md` (este archivo)
 
 **Web (paleta + fondo)**
 

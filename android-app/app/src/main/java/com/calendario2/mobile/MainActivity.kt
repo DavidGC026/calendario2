@@ -358,7 +358,7 @@ private fun GlassTextField(
             unfocusedBorderColor = Color.Transparent,
             focusedLabelColor = DvgColors.Rose300,
             unfocusedLabelColor = DvgColors.White55,
-            cursorColor = DvgColors.Blue400,
+            cursorColor = DvgColors.Gold400,
         ),
     )
 }

@@ -40,15 +40,9 @@ fun Modifier.glassInset(radius: Dp = 12.dp): Modifier =
         .border(BorderStroke(1.dp, DvgColors.White15), RoundedCornerShape(radius))
 
 /**
- * Botón primario rose → blue (igual que los CTA de la web).
+ * Botón primario carmín → dorado (igual que los CTA de la web).
  */
 @Composable
 fun primaryGradient(): Brush = Brush.linearGradient(
-    colors = listOf(DvgColors.Rose600, DvgColors.Blue600),
-)
-
-/** Rose → blue (botón de confirmación). */
-@Composable
-fun skyGradient(): Brush = Brush.linearGradient(
-    colors = listOf(DvgColors.Rose500, DvgColors.Blue600),
+    colors = listOf(DvgColors.Rose600, DvgColors.Gold600),
 )

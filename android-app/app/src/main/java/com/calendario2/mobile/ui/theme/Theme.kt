@@ -6,33 +6,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 /**
- * Paleta web (Tailwind rose + blue sobre slate-950) usada por la página
- * principal y los correos. Mismo lenguaje visual que la app de escritorio.
+ * Paleta de marca DVG: carmín + dorado sobre carbón cálido.
+ * Conserva las superficies de cristal sin introducir subtonos morados.
  */
 object DvgColors {
-    val Slate950 = Color(0xFF020617)
-    val Slate900 = Color(0xFF0f172a)
-    val Slate800 = Color(0xFF1e293b)
-    val Slate700 = Color(0xFF334155)
-
-    val Sky200 = Color(0xFFbae6fd)
-    val Sky300 = Color(0xFF7dd3fc)
-    val Sky400 = Color(0xFF38bdf8)
-    val Sky500 = Color(0xFF0ea5e9)
-    val Sky600 = Color(0xFF0284c7)
+    val Slate950 = Color(0xFF0C0B0A)
+    val Slate900 = Color(0xFF151311)
+    val Slate800 = Color(0xFF25211E)
+    val Slate700 = Color(0xFF3A332D)
 
     val Rose300 = Color(0xFFfda4af)
     val Rose400 = Color(0xFFfb7185)
     val Rose500 = Color(0xFFf43f5e)
     val Rose600 = Color(0xFFe11d48)
 
-    val Violet400 = Color(0xFFa78bfa)
-    val Violet500 = Color(0xFF8b5cf6)
-    val Violet600 = Color(0xFF7c3aed)
-
-    val Blue400 = Color(0xFF60a5fa)
-    val Blue500 = Color(0xFF3b82f6)
-    val Blue600 = Color(0xFF2563eb)
+    val Gold300 = Color(0xFFEFD98E)
+    val Gold400 = Color(0xFFE7C66A)
+    val Gold500 = Color(0xFFC38A2B)
+    val Gold600 = Color(0xFFA66A18)
 
     val White95 = Color(0xF2FFFFFF)
     val White88 = Color(0xE0FFFFFF)
@@ -51,7 +42,7 @@ private val DvgColorScheme = darkColorScheme(
     primary = DvgColors.Rose500,
     onPrimary = Color.White,
     primaryContainer = DvgColors.Rose600,
-    secondary = DvgColors.Blue500,
+    secondary = DvgColors.Gold500,
     onSecondary = Color.White,
     tertiary = DvgColors.Rose500,
     onTertiary = Color.White,

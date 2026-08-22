@@ -93,7 +93,7 @@ export function AdminUsersPanel({ initialUsers, currentUserId }: Props) {
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-blue-500 text-sm font-bold text-white ring-2 ring-white/20">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-dvg-red-soft to-dvg-gold text-sm font-bold text-white ring-2 ring-dvg-gold-light/25">
                       {initial}
                     </div>
                     <div className="min-w-0">

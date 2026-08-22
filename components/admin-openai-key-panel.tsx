@@ -50,8 +50,8 @@ export function AdminOpenAiKeyPanel({ initial }: Props) {
   return (
     <section className="rounded-2xl border border-white/12 bg-white/[0.05] p-4 backdrop-blur-md sm:p-5">
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500/20 ring-1 ring-blue-400/30">
-          <KeyRound className="h-5 w-5 text-blue-100" />
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-dvg-gold/20 ring-1 ring-dvg-gold-light/30">
+          <KeyRound className="h-5 w-5 text-dvg-gold-light" />
         </div>
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold text-white">Clave de OpenAI</h2>
@@ -86,14 +86,14 @@ export function AdminOpenAiKeyPanel({ initial }: Props) {
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="sk-…"
-            className="mt-1.5 w-full rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2.5 text-sm text-white outline-none ring-rose-500/40 focus:ring-2"
+            className="mt-1.5 w-full rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2.5 text-sm text-white outline-none ring-dvg-gold/40 focus:ring-2"
           />
         </label>
         <div className="flex flex-wrap gap-2">
           <button
             type="submit"
             disabled={busy !== null || apiKey.trim().length < 20}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-dvg-red to-dvg-gold px-4 py-2 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
           >
             {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
             Guardar y comprobar

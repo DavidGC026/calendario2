@@ -31,7 +31,7 @@ export function GoogleAuthSection({ label }: { label: string }) {
           <div className="w-full border-t border-white/10" />
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="bg-slate-950/80 px-2 text-slate-400">o</span>
+          <span className="bg-neutral-950/80 px-2 text-slate-400">o</span>
         </div>
       </div>
       <GoogleSignInButton label={label} />

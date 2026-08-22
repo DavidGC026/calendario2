@@ -1,8 +1,9 @@
 "use client"
 
-import { CalendarDays, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react"
 
 import { Checkbox } from "@/components/ui/checkbox"
+import { DvgMark } from "@/components/dvg-mark"
 
 export type CalendarCell = {
   date: string
@@ -10,7 +11,7 @@ export type CalendarCell = {
   inCurrentMonth: boolean
 }
 
-type CalendarEvent = {
+type SidebarCalendarEvent = {
   id: string
   title: string
   location: string
@@ -29,16 +30,32 @@ const CALENDAR_LANE_COLORS = [
   { id: "bg-purple-500", key: "calFamily" as const },
 ] as const
 
-type T = Record<string, string>
+type CalendarSidebarCopy = {
+  miniCalendar: string
+  goToday: string
+  weekdays: readonly string[]
+  prevMonth: string
+  nextMonth: string
+  myCalendars: string
+  calPersonal: string
+  calWork: string
+  calPrivate: string
+  calFamily: string
+  eventsPanel: string
+  loadingEvents: string
+  noEvents: string
+  editEvent: string
+  deleteEvent: string
+}
 
-type CalendarSidebarProps = {
-  t: T
+type CalendarSidebarProps<TEvent extends SidebarCalendarEvent> = {
+  t: CalendarSidebarCopy
   glassPanel: string
   glassInset: string
   today: string
   monthLabel: string
   calendarCells: CalendarCell[]
-  eventsByDate: Map<string, CalendarEvent[]>
+  eventsByDate: Map<string, TEvent[]>
   anchorDate: string
   onSelectDay: (iso: string) => void
   onGoToday: () => void
@@ -51,15 +68,15 @@ type CalendarSidebarProps = {
   createLabel: string
   brandCalendar: string
   loadingEvents: boolean
-  visibleEvents: CalendarEvent[]
-  onEdit: (e: CalendarEvent) => void
+  visibleEvents: TEvent[]
+  onEdit: (e: TEvent) => void
   onDelete: (id: string) => void
   listScopeLabel: string
   /** En el drawer móvil el scroll va en el contenedor exterior; sin flex-1 para que la lista no quede con altura 0. */
   mobileDrawer?: boolean
 }
 
-export function CalendarSidebarContent({
+export function CalendarSidebarContent<TEvent extends SidebarCalendarEvent>({
   t,
   glassPanel,
   glassInset,
@@ -84,7 +101,7 @@ export function CalendarSidebarContent({
   onDelete,
   listScopeLabel,
   mobileDrawer = false,
-}: CalendarSidebarProps) {
+}: CalendarSidebarProps<TEvent>) {
   return (
     <div
       className={
@@ -95,7 +112,7 @@ export function CalendarSidebarContent({
     >
       <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-4">
         <div className="flex items-center gap-2">
-          <CalendarDays className="h-6 w-6 text-rose-300" />
+          <DvgMark className="h-8 w-8 drop-shadow-[0_3px_10px_rgba(166,27,36,0.35)]" />
           <span className="text-lg font-semibold tracking-tight text-white">{brandCalendar}</span>
         </div>
       </div>
@@ -103,7 +120,7 @@ export function CalendarSidebarContent({
       <button
         type="button"
         onClick={onCreate}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-900/40 transition hover:opacity-95"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-dvg-red to-dvg-gold py-3 text-sm font-semibold text-white shadow-lg shadow-black/30 transition duration-200 hover:brightness-110"
       >
         <Plus className="h-5 w-5" />
         {createLabel}
@@ -115,7 +132,7 @@ export function CalendarSidebarContent({
           <button
             type="button"
             onClick={onGoToday}
-            className="rounded-lg bg-blue-500/30 px-2 py-1 text-xs font-medium text-blue-100 ring-1 ring-blue-400/30 transition hover:bg-blue-500/40"
+            className="rounded-lg bg-dvg-gold/25 px-2 py-1 text-xs font-medium text-dvg-gold-light ring-1 ring-dvg-gold-light/30 transition hover:bg-dvg-gold/35"
           >
             {t.goToday}
           </button>

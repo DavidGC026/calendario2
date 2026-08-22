@@ -2,7 +2,7 @@
 <resources>
     <style name="Theme.CalendarioMobile" parent="android:Theme.Material.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">#0f172a</item>
+        <item name="android:navigationBarColor">#0C0B0A</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>
