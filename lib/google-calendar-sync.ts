@@ -274,23 +274,30 @@ async function runSync(link: GoogleCalendarLink): Promise<SyncResult> {
   }
 
   // 3. Lo que cambió allá. Con testigo, Google manda solo la diferencia.
+  //
+  // La ventana se aplica SIEMPRE que no hay testigo, no solo al recuperarse de
+  // un 410. La primera versión solo la ponía en la recuperación, y la primera
+  // sincronización se traía el calendario entero: en la agenda de David
+  // aparecieron eventos de 2023. Con `singleEvents: true` eso es peor de lo que
+  // suena —una serie «todos los lunes desde 2019» se expande instancia por
+  // instancia— y además cada evento viejo se queda luego en el contexto de la IA.
+  const ventana = () => ({
+    timeMin: new Date(Date.now() - WINDOW_PAST_DAYS * 86_400_000).toISOString(),
+    timeMax: new Date(Date.now() + WINDOW_FUTURE_DAYS * 86_400_000).toISOString(),
+  })
+
   let events: GoogleEvent[]
   let nextSyncToken: string | null
   try {
     ;({ events, nextSyncToken } = await listEvents(token, {
       calendarId: link.calendarId,
       syncToken: link.syncToken,
+      ...(link.syncToken ? {} : ventana()),
     }))
   } catch (e) {
     if (!(e instanceof GoogleSyncTokenExpired)) throw e
-    // El testigo caducó: se vuelve a empezar con una ventana acotada. Sin
-    // `timeMax`, una serie «todos los lunes, para siempre» se expandiría sin fin.
     result.fullResync = true
-    ;({ events, nextSyncToken } = await listEvents(token, {
-      calendarId: link.calendarId,
-      timeMin: new Date(Date.now() - WINDOW_PAST_DAYS * 86_400_000).toISOString(),
-      timeMax: new Date(Date.now() + WINDOW_FUTURE_DAYS * 86_400_000).toISOString(),
-    }))
+    ;({ events, nextSyncToken } = await listEvents(token, { calendarId: link.calendarId, ...ventana() }))
   }
 
   for (const event of events) {

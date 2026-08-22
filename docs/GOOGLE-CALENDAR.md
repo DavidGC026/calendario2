@@ -85,8 +85,16 @@ acaba de escribir aquí, porque su cambio todavía no ha llegado allá.
    siempre y nadie se entera.
 2. **Cambios de aquí → Google.** «Cambiado» es `updatedAt > googleSyncedAt`.
 3. **Cambios de Google → aquí**, con `syncToken` incremental: Google devuelve solo
-   lo que cambió. Si caduca (410), una pasada completa acotada a
-   −90 / +400 días.
+   lo que cambió. Sin testigo —la primera vez, o tras un 410— una pasada completa
+   acotada a −90 / +400 días.
+
+> **Corregido el 2026-08-21.** La ventana se aplicaba solo al recuperarse de un
+> 410, no en la primera sincronización: la primera pasada pedía el calendario
+> entero y en la agenda aparecieron eventos de 2023. Con `singleEvents: true` eso
+> es peor de lo que suena —una serie «todos los lunes desde 2019» se expande
+> instancia por instancia— y además cada evento viejo se queda después en el
+> contexto de la IA, que lo manda entero en cada mensaje. Se detectó midiendo
+> cuánto ocupaba ese contexto, no por un fallo visible.
 
 ### El eco
 
@@ -143,6 +151,7 @@ Y una línea más en el crontab, junto a las que ya hay:
 | Rutas | `app/api/google-calendar/…` y `app/api/cron/google-sync/` |
 | Interfaz | `components/google-calendar-card.tsx` |
 | Comprobación | `npm run test:google-sync` |
+| El panel de IA que lee estos eventos | [`PANEL-DE-IA.md`](./PANEL-DE-IA.md) |
 
 ## Qué hacer cuando falle
 

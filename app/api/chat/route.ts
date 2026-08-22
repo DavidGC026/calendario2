@@ -56,17 +56,6 @@ const calendarColorSchema = z
     "Calendario: bg-blue-500 Mi calendario, bg-green-500 Trabajo, bg-orange-500 Personal, bg-purple-500 Familia",
   )
 
-async function messagesHaveImageParts(messages: UIMessage[]): Promise<boolean> {
-  for (const m of messages) {
-    if (m.role !== "user") continue
-    for (const p of m.parts) {
-      if (p.type === "file" && typeof p.mediaType === "string" && p.mediaType.startsWith("image/")) {
-        return true
-      }
-    }
-  }
-  return false
-}
 
 export async function POST(req: Request) {
   const { user, error } = await requireAiAccess()
@@ -134,12 +123,16 @@ export async function POST(req: Request) {
     ? `\n\nToday's date is ${todayIso} (${todayReadable}). For tool calls, always use eventDate as YYYY-MM-DD. If the user gives a day and month without a year, choose the year that matches their intent relative to today (often the current year if that calendar date has not passed yet, or the upcoming occurrence they mean).`
     : `\n\nLa fecha de hoy es ${todayIso} (${todayReadable}). Para las tools usa siempre eventDate en formato YYYY-MM-DD. Si el usuario indica solo día y mes sin año, elige el año coherente con lo que pide respecto a hoy (por ejemplo el año actual si aún no pasó esa fecha este año, o el "próximo" 27 de abril que corresponda).`
 
-  const hasImages = await messagesHaveImageParts(messages)
   const openai = await getOpenAiProvider()
   if (!openai) {
     return Response.json({ error: "OPENAI_API_KEY no configurada" }, { status: 503 })
   }
-  const model = openai(hasImages ? "gpt-4o" : "gpt-4o-mini")
+  // Un solo modelo para todo. Antes había dos —gpt-4o-mini para texto y gpt-4o
+  // en cuanto llegaba una imagen— y esa bifurcación existía solo porque el
+  // barato no veía. gpt-5.6-luna lee imágenes y llama a herramientas, así que
+  // sobra la rama y con ella la posibilidad de que las dos mitades del panel se
+  // comporten distinto sin que nadie sepa por qué.
+  const model = openai("gpt-5.6-luna")
 
   const multimodalHint = isEnglish
     ? "\nThe user may send images (screenshots, photos, exported chat text). Read any text visible in images; extract dates/times/titles and use tools to create or update events. For pasted WhatsApp-style text, parse lines for day, time and title."

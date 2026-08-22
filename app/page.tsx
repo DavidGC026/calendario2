@@ -4,10 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import {
   DefaultChatTransport,
-  isFileUIPart,
-  isReasoningUIPart,
-  isTextUIPart,
-  isToolUIPart,
   type UIMessage,
 } from "ai"
 import {
@@ -45,12 +41,13 @@ import { CalendarSidebarContent, type CalendarCell } from "@/components/calendar
 import { CalendarWeekGrid } from "@/components/calendar-week-grid"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { CalendarFeedCard } from "@/components/calendar-feed-card"
+import { AiChatStream } from "@/components/ai-chat-stream"
 import { GoogleCalendarCard } from "@/components/google-calendar-card"
 import { ApiKeysCard } from "@/components/api-keys-card"
 import { ContactsManager } from "@/components/contacts-manager"
 import { AppWallpaper } from "@/components/app-wallpaper"
 import { WallpaperPicker } from "@/components/wallpaper-picker"
-import { CALENDAR_LANE_COLORS, laneLabel } from "@/lib/calendar-lanes"
+import { CALENDAR_LANE_COLORS } from "@/lib/calendar-lanes"
 import {
   accentHexForColor,
   addDays,
@@ -187,7 +184,7 @@ const copy = {
       "Puedes crear, editar o borrar eventos, revisar conflictos, asignar calendario (Trabajo, Personal, Familia…) y adjuntar capturas o fotos. El historial se guarda en este dispositivo.",
     noMessages: "Todavía no hay mensajes.",
     structuredResponse: "Respuesta estructurada recibida (tool result).",
-    chatPlaceholder: "Texto, captura o pega un mensaje de WhatsApp…",
+    chatPlaceholder: "Escribe o dicta…",
     chatAttachImage: "Adjuntar imagen",
     chatClearHistory: "Borrar historial del chat",
     chatDefaultImagePrompt: "Extrae fechas y horas de la imagen y agéndalas.",
@@ -255,7 +252,7 @@ const copy = {
     eventsPanel: "Eventos",
     goToday: "Hoy",
     quickNav: "Navegación",
-    brandCalendar: "Calendar",
+    brandCalendar: "DVG Calendar",
     create: "Crear",
     myCalendars: "Mis calendarios",
     calPersonal: "Mi calendario",
@@ -321,7 +318,7 @@ const copy = {
       "You can create, edit or delete events, check conflicts, pick a calendar lane (Work, Personal, Family…), and attach screenshots or photos. Chat history is stored on this device.",
     noMessages: "No messages yet.",
     structuredResponse: "Structured response received (tool result).",
-    chatPlaceholder: "Type, paste WhatsApp text, or attach a screenshot…",
+    chatPlaceholder: "Type or dictate…",
     chatAttachImage: "Attach image",
     chatClearHistory: "Clear chat history",
     chatDefaultImagePrompt: "Extract dates and times from the image and add them to the calendar.",
@@ -389,7 +386,7 @@ const copy = {
     eventsPanel: "Events",
     goToday: "Today",
     quickNav: "Quick nav",
-    brandCalendar: "Calendar",
+    brandCalendar: "DVG Calendar",
     create: "Create",
     myCalendars: "My calendars",
     calPersonal: "My calendar",
@@ -415,50 +412,6 @@ const copy = {
   },
 } as const
 
-function summarizeToolOutput(output: unknown, language: Locale): string {
-  if (output === null || output === undefined) return ""
-  if (typeof output !== "object") return String(output)
-  const o = output as Record<string, unknown>
-  if (o.success === false) {
-    if (typeof o.error === "string") return o.error
-    if (typeof o.message === "string") return o.message
-    if (Array.isArray(o.conflicts) && o.conflicts.length > 0) {
-      return language === "es" ? "Conflicto de horario con otros eventos." : "Schedule conflict with existing events."
-    }
-  }
-  if (o.success === true && o.event && typeof o.event === "object") {
-    const ev = o.event as {
-      title?: string
-      eventDate?: string
-      startTime?: string
-      endTime?: string
-      color?: string
-    }
-    const lane = ev.color ? laneLabel(language, ev.color) : ""
-    const laneBit = lane ? (language === "es" ? ` · ${lane}` : ` · ${lane}`) : ""
-    return language === "es"
-      ? `Listo: «${ev.title ?? "?"}» el ${ev.eventDate ?? ""} de ${ev.startTime ?? ""} a ${ev.endTime ?? ""}${laneBit}.`
-      : `Done: "${ev.title ?? "?"}" on ${ev.eventDate ?? ""} ${ev.startTime ?? ""}–${ev.endTime ?? ""}${laneBit}.`
-  }
-  if (o.success === true && !o.event) {
-    return language === "es" ? "Operación completada." : "Operation completed."
-  }
-  if ("message" in o && typeof o.message === "string") return o.message
-  if ("hasConflicts" in o) {
-    return language === "es"
-      ? o.hasConflicts
-        ? "Hay solapamientos en ese horario."
-        : "Sin conflictos en ese horario."
-      : o.hasConflicts
-        ? "Overlaps found."
-        : "No overlaps."
-  }
-  try {
-    return JSON.stringify(output, null, 0)
-  } catch {
-    return String(output)
-  }
-}
 
 const CHAT_STORAGE_PREFIX = "calendar-app-ai-chat-v1:"
 
@@ -487,10 +440,10 @@ function trimChatForStorage(messages: UIMessage[]): UIMessage[] {
 }
 
 const glassPanel =
-  "rounded-2xl border border-white/20 bg-gradient-to-br from-white/15 via-white/8 to-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl"
-const glassInset = "rounded-xl border border-white/15 bg-white/5 backdrop-blur-md"
+  "rounded-2xl border border-dvg-gold-light/20 bg-gradient-to-br from-white/15 via-white/8 to-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+const glassInset = "rounded-xl border border-dvg-gold-light/15 bg-white/5 backdrop-blur-md"
 const inputGlass =
-  "w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-white placeholder:text-white/45 outline-none transition focus:border-rose-400/60 focus:ring-2 focus:ring-rose-500/30"
+  "w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-white placeholder:text-white/45 outline-none transition focus:border-dvg-gold-light/60 focus:ring-2 focus:ring-dvg-gold/30"
 
 export default function HomePage() {
   const { data: session, status: sessionStatus, update: updateSession } = useSession()
@@ -1160,10 +1113,10 @@ export default function HomePage() {
 
   if (sessionStatus === "loading") {
     return (
-      <main className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-950/90 via-slate-950 to-blue-950/90" />
+      <main className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+        <div className="absolute inset-0 bg-gradient-to-br from-dvg-red-dark/90 via-neutral-950 to-dvg-gold-dark/80" />
         <div className="relative flex min-h-screen items-center justify-center">
-          <Loader2 className="h-10 w-10 animate-spin text-rose-300" />
+          <Loader2 className="h-10 w-10 animate-spin text-dvg-gold-light" />
         </div>
       </main>
     )
@@ -1175,11 +1128,11 @@ export default function HomePage() {
         <AppWallpaper dimmer />
         <div className="relative flex min-h-screen items-center justify-center px-4">
           <div className={`${glassPanel} max-w-md p-8 text-center`}>
-            <Sparkles className="mx-auto mb-3 h-10 w-10 text-rose-300" />
+            <Sparkles className="mx-auto mb-3 h-10 w-10 text-dvg-gold-light" />
             <p className="mb-4 text-lg text-white/90">{t.authRequired}</p>
             <a
               href="/login"
-              className="inline-block rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-6 py-3 font-medium shadow-lg transition hover:opacity-90"
+              className="inline-block rounded-xl bg-gradient-to-r from-dvg-red to-dvg-gold px-6 py-3 font-medium shadow-lg transition duration-200 hover:brightness-110"
             >
               {t.goToLogin}
             </a>
@@ -1197,7 +1150,7 @@ export default function HomePage() {
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
           <SheetContent
             side="left"
-            className="flex max-h-[100dvh] w-[min(100vw-0.5rem,320px)] flex-col overflow-hidden border-white/15 bg-slate-950/98 p-0 text-white backdrop-blur-xl sm:max-w-[300px]"
+            className="flex max-h-[100dvh] w-[min(100vw-0.5rem,320px)] flex-col overflow-hidden border-white/15 bg-neutral-950/98 p-0 text-white backdrop-blur-xl sm:max-w-[300px]"
           >
             <div className="box-border min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-4 pb-safe pt-safe [-webkit-overflow-scrolling:touch]">
               <CalendarSidebarContent
@@ -1236,7 +1189,7 @@ export default function HomePage() {
           </SheetContent>
         </Sheet>
 
-        <aside className="hidden h-[100dvh] w-[300px] shrink-0 flex-col overflow-hidden border-r border-white/10 bg-slate-950/35 p-4 backdrop-blur-2xl md:flex">
+        <aside className="hidden h-[100dvh] w-[300px] shrink-0 flex-col overflow-hidden border-r border-white/10 bg-neutral-950/35 p-4 backdrop-blur-2xl md:flex">
           <CalendarSidebarContent
             t={t}
             glassPanel={glassPanel}
@@ -1265,7 +1218,7 @@ export default function HomePage() {
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:min-h-0">
-          <div className="sticky top-0 z-30 shrink-0 border-b border-white/10 bg-slate-950/80 px-safe py-2 backdrop-blur-xl md:static md:bg-slate-950/45 md:py-3 md:px-5">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-white/10 bg-neutral-950/80 px-safe py-2 backdrop-blur-xl md:static md:bg-neutral-950/45 md:py-3 md:px-5">
             <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-3">
               <div className="flex min-w-0 items-center gap-2">
                 <button
@@ -1361,10 +1314,10 @@ export default function HomePage() {
                       onChange={(e) => setLanguage(e.target.value as Locale)}
                       className="cursor-pointer bg-transparent font-medium outline-none"
                     >
-                      <option value="es" className="bg-slate-900">
+                      <option value="es" className="bg-neutral-900">
                         ES
                       </option>
-                      <option value="en" className="bg-slate-900">
+                      <option value="en" className="bg-neutral-900">
                         EN
                       </option>
                     </select>
@@ -1398,7 +1351,7 @@ export default function HomePage() {
                     <Settings className="h-4 w-4" />
                   </button>
                   <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-blue-500 text-sm font-bold text-white ring-2 ring-white/25"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-dvg-red-soft to-dvg-gold text-sm font-bold text-white ring-2 ring-dvg-gold-light/30"
                     title={session?.user?.email ?? ""}
                   >
                     {(session?.user?.email?.[0] ?? "U").toUpperCase()}
@@ -1411,12 +1364,12 @@ export default function HomePage() {
           <div className="flex min-h-0 flex-1 flex-col px-safe pb-[calc(env(safe-area-inset-bottom)+96px)] pt-3 md:overflow-hidden md:pb-32 md:pl-6 md:pr-6 md:pt-4">
             {loadingEvents && events.length === 0 ? (
               <div className="flex flex-1 items-center justify-center gap-2 py-24 text-white/60">
-                <Loader2 className="h-8 w-8 animate-spin text-rose-300" />
+                <Loader2 className="h-8 w-8 animate-spin text-dvg-gold-light" />
                 {t.loadingEvents}
               </div>
             ) : viewMode === "month" ? (
               <div className="flex min-h-0 flex-1 flex-col gap-3">
-                <div className="shrink-0 rounded-2xl border border-white/15 bg-slate-950/60 p-3 md:bg-white/[0.07] md:p-5 md:backdrop-blur-xl">
+                <div className="shrink-0 rounded-2xl border border-white/15 bg-neutral-950/60 p-3 md:bg-white/[0.07] md:p-5 md:backdrop-blur-xl">
                   <div className="mb-3 flex items-center justify-between px-1">
                     <h3 className="text-base font-semibold capitalize tracking-tight text-white md:text-lg">{monthLabel}</h3>
                     <div className="flex items-center gap-1">
@@ -1453,7 +1406,7 @@ export default function HomePage() {
                         return (
                           <div
                             key={cell.date}
-                            className="min-h-[3.75rem] rounded-xl border border-white/[0.04] bg-slate-900/40 md:min-h-[4.25rem]"
+                            className="min-h-[3.75rem] rounded-xl border border-white/[0.04] bg-neutral-900/40 md:min-h-[4.25rem]"
                           />
                         )
                       }
@@ -1467,16 +1420,16 @@ export default function HomePage() {
                           onClick={() => setAnchorDate(cell.date)}
                           className={`group flex min-h-[3.75rem] flex-col rounded-xl border p-1.5 text-left transition active:scale-[0.98] md:min-h-[4.25rem] md:p-2 ${
                             isSelected
-                              ? "border-white/35 bg-slate-900/85 ring-1 ring-white/25"
+                              ? "border-white/35 bg-neutral-900/85 ring-1 ring-white/25"
                               : isTodayCell
-                                ? "border-rose-400/60 bg-slate-900/80 ring-1 ring-rose-400/40"
-                                : "border-white/10 bg-slate-900/60 hover:bg-slate-900/80"
+                                ? "border-rose-400/60 bg-neutral-900/80 ring-1 ring-rose-400/40"
+                                : "border-white/10 bg-neutral-900/60 hover:bg-neutral-900/80"
                           }`}
                         >
                           <div className="flex w-full items-center justify-center">
                             <span
                               className={`flex h-7 min-w-[1.75rem] items-center justify-center rounded-full text-xs font-semibold tabular-nums md:text-sm ${
-                                isTodayCell ? "ring-2 ring-white/80 ring-offset-1 ring-offset-slate-900" : ""
+                                isTodayCell ? "ring-2 ring-white/80 ring-offset-1 ring-offset-neutral-900" : ""
                               } ${isTodayCell ? "text-rose-300" : "text-white/90"}`}
                             >
                               {cell.dayNumber}
@@ -1505,7 +1458,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border border-white/15 bg-slate-950/70 p-3 backdrop-blur-xl md:min-h-0 md:p-4">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border border-white/15 bg-neutral-950/70 p-3 backdrop-blur-xl md:min-h-0 md:p-4">
                   <div className="mb-2 flex shrink-0 flex-wrap items-end justify-between gap-2 border-b border-white/10 pb-2">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">{t.monthView}</p>
@@ -1579,15 +1532,15 @@ export default function HomePage() {
             <button
               type="button"
               onClick={openCreateBlank}
-              className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xl ring-2 ring-blue-300/40 transition active:scale-95"
+              className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-dvg-gold text-white shadow-2xl ring-2 ring-dvg-gold-light/40 transition active:scale-95"
               aria-label={t.sheetCreate}
             >
               <Plus className="h-6 w-6" />
             </button>
           </div>
         ) : !aiWelcomeDismissed ? (
-          <div className="pointer-events-auto fixed left-4 right-4 z-[60] mx-auto max-w-sm rounded-2xl border border-white/20 bg-slate-950/90 p-4 shadow-[0_12px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl bottom-[calc(env(safe-area-inset-bottom)+76px)] md:bottom-[88px] sm:left-auto sm:right-[max(1.5rem,env(safe-area-inset-right))] sm:mx-0 md:right-8">
-            <Sparkles className="mb-2 h-6 w-6 text-rose-300" />
+          <div className="pointer-events-auto fixed left-4 right-4 z-[60] mx-auto max-w-sm rounded-2xl border border-white/20 bg-neutral-950/90 p-4 shadow-[0_12px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl bottom-[calc(env(safe-area-inset-bottom)+76px)] md:bottom-[88px] sm:left-auto sm:right-[max(1.5rem,env(safe-area-inset-right))] sm:mx-0 md:right-8">
+            <Sparkles className="mb-2 h-6 w-6 text-dvg-gold-light" />
             <p className="font-semibold text-white">{t.aiWelcomeTitle}</p>
             <p className="mt-1 text-sm text-white/70">{t.aiWelcomeBody}</p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -1597,7 +1550,7 @@ export default function HomePage() {
                   dismissAiWelcome()
                   setAiSheetOpen(true)
                 }}
-                className="rounded-xl bg-gradient-to-r from-rose-500 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg"
+                className="rounded-xl bg-gradient-to-r from-dvg-red-soft to-dvg-gold px-4 py-2 text-sm font-medium shadow-lg"
               >
                 {t.aiWelcomeYes}
               </button>
@@ -1615,7 +1568,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setAiSheetOpen(true)}
-              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-rose-600 to-blue-500 text-white shadow-xl ring-2 ring-white/25 transition active:scale-95"
+              className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-dvg-red to-dvg-gold text-white shadow-xl ring-2 ring-dvg-gold-light/30 transition active:scale-95"
               aria-label={t.openChat}
             >
               <Sparkles className="h-5 w-5" />
@@ -1623,7 +1576,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={openCreateBlank}
-              className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xl ring-2 ring-blue-300/40 transition active:scale-95"
+              className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-dvg-gold text-white shadow-2xl ring-2 ring-dvg-gold-light/40 transition active:scale-95"
               aria-label={t.sheetCreate}
             >
               <Plus className="h-6 w-6" />
@@ -1641,7 +1594,7 @@ export default function HomePage() {
         <Sheet open={createOpen} onOpenChange={setCreateOpen}>
           <SheetContent
             side="right"
-            className="h-[100dvh] max-h-[100dvh] w-full max-w-lg overflow-y-auto border-white/15 bg-slate-950/98 px-4 pb-safe pt-safe text-white backdrop-blur-xl sm:px-6 sm:pb-6"
+            className="h-[100dvh] max-h-[100dvh] w-full max-w-lg overflow-y-auto border-white/15 bg-neutral-950/98 px-4 pb-safe pt-safe text-white backdrop-blur-xl sm:px-6 sm:pb-6"
           >
             <SheetHeader>
               <SheetTitle>{editingEventId ? t.updateEvent : t.sheetCreate}</SheetTitle>
@@ -1735,7 +1688,7 @@ export default function HomePage() {
                     }
                   >
                     {REMINDER_OPTIONS.map((opt) => (
-                      <option key={opt.value ?? "none"} value={opt.value ?? ""} className="bg-slate-900">
+                      <option key={opt.value ?? "none"} value={opt.value ?? ""} className="bg-neutral-900">
                         {language === "es"
                           ? opt.label
                           : opt.value === null
@@ -1828,7 +1781,7 @@ export default function HomePage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   disabled={creatingEvent}
-                  className="rounded-xl bg-gradient-to-r from-rose-500 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
+                  className="rounded-xl bg-gradient-to-r from-dvg-red-soft to-dvg-gold px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
                   type="submit"
                 >
                   {creatingEvent ? t.saving : editingEventId ? t.updateEvent : t.saveEvent}
@@ -1859,7 +1812,7 @@ export default function HomePage() {
                 />
                 <button
                   type="button"
-                  className="shrink-0 rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-3 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
+                  className="shrink-0 rounded-xl bg-gradient-to-r from-dvg-red to-dvg-gold px-3 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
                   onClick={handleNaturalInput}
                   disabled={parsing || !naturalInput.trim()}
                 >
@@ -1892,7 +1845,7 @@ export default function HomePage() {
         <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
           <SheetContent
             side="right"
-            className="h-[100dvh] max-h-[100dvh] w-full max-w-md overflow-y-auto border-white/15 bg-slate-950/98 px-4 pb-safe pt-safe text-white backdrop-blur-xl sm:px-6 sm:pb-6"
+            className="h-[100dvh] max-h-[100dvh] w-full max-w-md overflow-y-auto border-white/15 bg-neutral-950/98 px-4 pb-safe pt-safe text-white backdrop-blur-xl sm:px-6 sm:pb-6"
           >
             <SheetHeader>
               <SheetTitle>{t.sheetSettings}</SheetTitle>
@@ -1950,7 +1903,7 @@ export default function HomePage() {
                   <button
                     type="submit"
                     disabled={savingPassword}
-                    className="w-fit rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
+                    className="w-fit rounded-xl bg-gradient-to-r from-dvg-red to-dvg-gold px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
                   >
                     {savingPassword ? "..." : t.savePassword}
                   </button>
@@ -2003,7 +1956,7 @@ export default function HomePage() {
 
               <div className="mt-4 border-t border-white/10 pt-4">
                 <h3 className="flex items-center gap-2 font-medium text-white/90">
-                  <Smartphone className="h-4 w-4 text-rose-300" />
+                  <Smartphone className="h-4 w-4 text-dvg-gold-light" />
                   {t.androidAppTitle}
                 </h3>
                 <p className="mt-1 text-xs text-white/55">{t.androidAppHint}</p>
@@ -2012,7 +1965,7 @@ export default function HomePage() {
                     <a
                       href={androidApk.url}
                       download="dvgcalendar.apk"
-                      className="inline-flex w-fit items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg transition hover:brightness-110"
+                      className="inline-flex w-fit items-center gap-2 rounded-xl bg-gradient-to-r from-dvg-red to-dvg-gold px-4 py-2 text-sm font-medium shadow-lg transition hover:brightness-110"
                     >
                       <Download className="h-4 w-4" />
                       {t.androidAppCta}
@@ -2034,7 +1987,7 @@ export default function HomePage() {
 
               <div className="mt-4 border-t border-white/10 pt-4">
                 <h3 className="flex items-center gap-2 font-medium text-white/90">
-                  <UserPlus className="h-4 w-4 text-rose-300" />
+                  <UserPlus className="h-4 w-4 text-dvg-gold-light" />
                   {language === "es" ? "Añadir amigo" : "Add friend"}
                 </h3>
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
@@ -2048,7 +2001,7 @@ export default function HomePage() {
                     type="button"
                     disabled={sendingFriendRequest || !friendIdInput.trim()}
                     onClick={() => void sendFriendRequestAction()}
-                    className="shrink-0 rounded-xl bg-gradient-to-r from-rose-500 to-blue-600 px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
+                    className="shrink-0 rounded-xl bg-gradient-to-r from-dvg-red-soft to-dvg-gold px-4 py-2 text-sm font-medium shadow-lg disabled:opacity-50"
                   >
                     {sendingFriendRequest ? "…" : t.sendFriendRequest}
                   </button>
@@ -2162,98 +2115,45 @@ export default function HomePage() {
         <Sheet open={aiSheetOpen} onOpenChange={setAiSheetOpen}>
           <SheetContent
             side="right"
-            className="flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col overflow-hidden border-white/15 bg-slate-950/98 px-4 pb-safe pt-safe text-white backdrop-blur-xl sm:px-6 sm:pb-6"
+            className="flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col overflow-hidden border-l border-white/10 bg-gradient-to-b from-[#0B0E18] via-[#080A12] to-[#05070D] px-4 pb-safe pt-safe text-white shadow-[inset_1px_0_0_rgba(255,255,255,0.06)] backdrop-blur-2xl sm:px-6 sm:pb-6"
           >
-            <SheetHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
-              <SheetTitle>{t.sheetAi}</SheetTitle>
+            {/* El título se salía por arriba y quedaba pisado por el botón de
+                borrar, que además ocupaba media cabecera con su texto. Una sola
+                fila, sin envolver, y el borrar reducido a su icono: lo que se
+                lee primero al abrir el panel debe ser de quién es la voz, no una
+                acción destructiva. */}
+            <SheetHeader className="flex shrink-0 flex-row items-center justify-between gap-3 space-y-0 pr-8 pt-1">
+              <SheetTitle className="flex items-center gap-2 text-base font-semibold tracking-tight text-white">
+                <Sparkles className="h-4 w-4 text-dvg-gold-light" aria-hidden />
+                {t.sheetAi}
+              </SheetTitle>
               <button
                 type="button"
                 onClick={clearAiChatHistory}
-                className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/15 px-2 py-1 text-xs text-white/70 transition hover:bg-white/10"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/15 text-white/60 transition hover:bg-white/10 hover:text-white"
                 title={t.chatClearHistory}
+                aria-label={t.chatClearHistory}
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                {t.chatClearHistory}
               </button>
             </SheetHeader>
-            <p className="mt-2 shrink-0 text-sm text-white/65">{t.aiHelp}</p>
             <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3">
-            <div className={`${glassInset} min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3`}>
-              {messages.length === 0 ? (
-                <p className="text-sm text-white/45">{t.noMessages}</p>
-              ) : (
-                messages.map((message) => (
-                  <div key={message.id} className="text-sm text-white/90">
-                    <p className="mb-1 text-xs uppercase tracking-wide text-white/45">
-                      {message.role === "user"
-                        ? t.roleUser
-                        : message.role === "assistant"
-                          ? t.roleAssistant
-                          : message.role}
-                    </p>
-                    <div className="space-y-2">
-                      {message.parts.map((part, pi) => {
-                        if (isReasoningUIPart(part)) return null
-                        if (isTextUIPart(part)) {
-                          return part.text ? (
-                            <p key={pi} className="whitespace-pre-wrap text-white/85">
-                              {part.text}
-                            </p>
-                          ) : null
-                        }
-                        if (isFileUIPart(part)) {
-                          if (part.mediaType?.startsWith("image/") && part.url && part.url !== "[adjunto]") {
-                            return (
-                              // eslint-disable-next-line @next/next/no-img-element -- data URLs del chat
-                              <img
-                                key={pi}
-                                src={part.url}
-                                alt=""
-                                className="max-h-40 max-w-full rounded-lg border border-white/15 object-contain"
-                              />
-                            )
-                          }
-                          return (
-                            <p key={pi} className="text-xs text-white/45">
-                              {language === "es" ? "Archivo adjunto" : "Attachment"}
-                            </p>
-                          )
-                        }
-                        if (isToolUIPart(part)) {
-                          const toolName = part.type.startsWith("tool-")
-                            ? part.type.slice(5)
-                            : part.type
-                          const out =
-                            part.state === "output-available" && "output" in part
-                              ? (part as { output?: unknown }).output
-                              : undefined
-                          const pending =
-                            part.state === "input-streaming" || part.state === "input-available"
-                          return (
-                            <div
-                              key={pi}
-                              className="rounded-lg border border-white/10 bg-white/[0.06] p-2 text-xs"
-                            >
-                              <p className="font-medium text-rose-200/90">{toolName}</p>
-                              {pending ? (
-                                <p className="text-white/50">
-                                  {language === "es" ? "Ejecutando…" : "Running…"}
-                                </p>
-                              ) : (
-                                <p className="text-white/85">
-                                  {summarizeToolOutput(out, language) ||
-                                    (language === "es" ? "(sin salida)" : "(no output)")}
-                                </p>
-                              )}
-                            </div>
-                          )
-                        }
-                        return null
-                      })}
-                    </div>
-                  </div>
-                ))
-              )}
+            {/* El hilo pasa por debajo de la barra de escritura, con un
+                degradado abajo, para que se note que hay más contenido en vez de
+                cortarse en seco contra el borde. */}
+            <div className="relative min-h-0 flex-1">
+              <div className="h-full overflow-y-auto overscroll-contain px-1 pb-4">
+                <AiChatStream
+                  messages={messages}
+                  language={language}
+                  busy={status === "streaming" || status === "submitted"}
+                  emptyText={t.aiHelp}
+                />
+              </div>
+              <div
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-neutral-950 to-transparent"
+                aria-hidden
+              />
             </div>
             <input
               ref={chatFileInputRef}
@@ -2354,7 +2254,7 @@ export default function HomePage() {
                 disabled={
                   status === "streaming" || (!chatInput.trim() && pendingChatFiles.length === 0)
                 }
-                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-rose-600 to-blue-600 px-4 py-2 font-medium shadow-lg disabled:opacity-50"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-dvg-red to-dvg-gold px-4 py-2 font-medium shadow-lg disabled:opacity-50"
               >
                 {status === "streaming" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </button>
